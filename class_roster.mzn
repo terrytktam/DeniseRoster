@@ -1,0 +1,318 @@
+include "globals.mzn";
+
+% Constants
+enum WEEKDAYS = {Mon, Tue, Wed, Thu, Fri, Sat, Sun};
+enum DUTIES = {N, A, P, O};
+enum TYPES = {LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT};
+enum RULES = {WardReqDuty,            % ward request duty constraint
+              EntitledDayOff,         % 5-day working + public holiday O entitlement constraint
+              ContractOff,            % # of contract O constraint
+              NoWeekendPP,            % no weekend PP constraint (mandatory)
+              MinWardStaffReq,        % daily ward requirement constraint (mandatory)
+              NormalDutyStateDiagram, % normal AN constraint
+              NormalNightFrequency,   % at most 1 N for CN days constraint (mandatory)
+              Consecutive3Duties,     % no triple-A/P and NPA/NPP constraint (mandatory)
+              NormalOffFrequency,     % at least 1 O for NW days constraint (mandatory)
+              ReqAnnualLeaves,        % requested annual leaves (mandatory)
+              LongNightDuties,        % requested long night duties (mandatory)
+              PublicHolidayOff        % # of public holiday O constraint
+              };
+enum MINS = { shift, total, ladybug, butterfly, dragonfly, bee };
+enum MAXS = { typ, nt, am, pm, off };
+array[DUTIES] of string: lowercase = ["n", "a", "p", "o"];
+
+% Parameters
+int: nRosterDays; % number of days in the roster
+int: MW;          % maximum number of consecutive shifts
+int: nLADYBUG;    % number of staffs in LADYBUG class
+int: nBUTTERFLY;  % number of staffs in BUTTERFLY class
+int: nDRAGONFLY;  % number of staffs in DRAGONFLY class
+int: nBEE;        % number of staffs in BEE class
+int: nNIGHT;      % number of NIGHT staffs
+WEEKDAYS: MONTH_START;
+array[int, int] of int: min_ward;
+array[int] of int: max_rn3;
+array[int, int] of int: staff_req_duties;
+array[int, int] of int: ward_req_duties;
+array[RULES] of bool: active_constraints;
+set of DAYS: public_holidays;
+
+% Tuples
+type TypeMins = tuple(TYPES, MINS);
+type DutiesMaxs = tuple(DUTIES, MAXS);
+type ReqDuties = tuple(STAFFS, DAYS, DUTIES);
+
+% Derived Parameters
+enum STAFFS = LYG(1..nLADYBUG) ++ BFY(1..nBUTTERFLY) ++ DNY(1..nDRAGONFLY) ++ BEE(1..nBEE) ++ NGT(1..nNIGHT);
+int: nStaffs = card(STAFFS);
+int: nWeekends = card(weekends);
+int: nDuties = card(DUTIES);
+int: nTypes = card(TYPES);
+int: nPHs = card(public_holidays);
+array[TYPES] of int: nTypeStaffs = [nLADYBUG, nBUTTERFLY, nDRAGONFLY, nBEE, nNIGHT];
+array[TYPES] of TypeMins: TYPE_MINS = [(LADYBUG, ladybug), (BUTTERFLY, butterfly), (DRAGONFLY, dragonfly), (BEE, bee)];
+array[DUTIES] of DutiesMaxs: DUTIES_MAXS = [(N, nt), (A, am), (P, pm), (O, off)];
+set of MAXS: SHIFT_MAXS = {nt, am, pm};
+set of WEEKDAYS: WEEKEND = {Sat, Sun};
+set of DUTIES: SHIFTS = {N, A, P};
+set of TYPES: CLASSES = {LADYBUG, BUTTERFLY, DRAGONFLY, BEE};
+set of DUTIES: OFF = {O};
+int: nClasses = card(CLASSES);
+
+% Derived Parameters (for cross-month calendar generation)
+int: nPrevMthDays = MW;
+int: nNextMthDays = 1;
+enum DAYS = V(1..nPrevMthDays) ++ C(1..nRosterDays) ++ X(1..nNextMthDays);
+array[DAYS] of WEEKDAYS: DAY_WEEKDAYS = [weekday(i) | i in DAYS];
+set of DAYS: weekends = array2set([i | i in DAYS where DAY_WEEKDAYS[i] in WEEKEND]);
+int: nDays = card(DAYS);
+
+% Derived Parameters (for ward max manpower generation)
+array[SHIFTS, MINS] of int: MIN_WARD = array2d(SHIFTS, MINS, min_ward);
+array[TYPES] of set of STAFFS: TYPE_STAFFS = [LYG(1..nLADYBUG), BFY(1..nBUTTERFLY), DNY(1..nDRAGONFLY), BEE(1..nBEE), NGT(1..nNIGHT)];
+array[int] of int: colmajor_1d = set2array(TYPES) ++ 
+                                [nTypeStaffs[k] - sum([MIN_WARD[l, m] | l in SHIFTS, m in MINS where i != l /\ (k, m) in TYPE_MINS]) | 
+                                i in SHIFTS, j in MAXS, k in TYPES where (i, j) in DUTIES_MAXS] ++
+                                [nTypeStaffs[i] - sum(col(MIN_WARD, j)) | i in TYPES, j in MINS where (i, j) in TYPE_MINS];
+array[int] of int: transpose = [colmajor_1d[(i-1) * nTypes + j] | j in 1..nTypes, i in 1..card(MAXS)];
+array[TYPES, MAXS] of int: TYPE_MAXS = array2d(TYPES, MAXS, transpose);
+
+% Derived Parameters (for requested duties)
+array[int] of ReqDuties: STAFF_REQ_DUTIES = req_duties(staff_req_duties);
+array[int] of ReqDuties: WARD_REQ_DUTIES = req_duties(ward_req_duties);
+
+% Function to get mask value for specific staff/day (P/O/<> pattern)
+%function opt DUTIES: get_special_mask(STAFFS: s, DAYS: d) =
+%    let {
+%        int: row = long_night_row(s,d)
+%    } in
+%    if row > 0 then
+%        if d == long_nights[row,2] then 
+%            if occurs(long_night_duties[s, enum_prev(d)]) then O else P endif  % First day
+%        else O endif    % Next 13 days after start
+%    else <> endif;      % All other days
+
+% Create the mask array
+%array[STAFFS, DAYS] of opt DUTIES: special_mask = 
+%    array2d(STAFFS, DAYS, [get_special_mask(s,d) | s in STAFFS, d in DAYS]);
+
+% Function to apply mask
+%function array[DAYS] of var DUTIES: apply_special_mask(STAFFS: s, array[DAYS] of var DUTIES: staff_roster) =
+%    array1d(DAYS, [if occurs(special_mask[s,d]) then deopt(special_mask[s,d]) else staff_roster[d] endif
+%                  | d in DAYS ]);
+
+% Decision Variables
+array[STAFFS, DAYS] of var DUTIES: roster;
+array[STAFFS, DAYS] of var opt CLASSES: roster_class;
+array[DAYS, DUTIES] of var set of STAFFS: ward;
+array[STAFFS, DUTIES] of var int: staff_duty_counts;
+array[DAYS, SHIFTS, CLASSES] of var int: ward_shift_manpower;
+
+% Channel constraints for roster/ward
+constraint forall(i in DAYS) (
+    partition_set(row(ward,i), STAFFS)
+);
+constraint forall(i in DAYS) (
+    int_set_channel(col(roster,i), row(ward,i))
+);
+constraint forall(i in STAFFS) (
+    global_cardinality(row(roster,i), DUTIES, row(staff_duty_counts,i))
+);
+constraint forall(i in DAYS, j in SHIFTS) (
+    ward_shift_manpower[i,j] = card(ward[i,j])
+);
+
+% Rule feature toggle constraints
+constraint active_constraints[WardReqDuty] -> rules1();
+constraint active_constraints[EntitledDayOff] -> rules2();
+constraint active_constraints[ContractOff] -> rules3();
+%constraint active_constraints[NoWeekendPP] -> rules4();
+constraint active_constraints[MinWardStaffReq] -> rules5();
+constraint active_constraints[NormalDutyStateDiagram] -> rules6();
+constraint active_constraints[NormalNightFrequency] -> rules7();
+constraint active_constraints[Consecutive3Duties] -> rules8();
+constraint active_constraints[NormalOffFrequency] -> rules9();
+%constraint active_constraints[ReqAnnualLeaves] -> rules10();
+%constraint active_constraints[LongNightDuties] -> rules11();
+constraint active_constraints[PublicHolidayOff] -> rules12();
+
+% Rule 1: constraint of matching roster with WARD_REQ_DUTIES
+predicate rules1 = forall(i in STAFFS, j in DAYS, k in DUTIES where has_element((i,j,k), WARD_REQ_DUTIES)) (
+    roster[i,j] == k
+);
+
+% Rule 2: constraint of # of Os (contract + public holidays) for every nurse in a month
+int: min_weekend_O = 6;
+int: min_O_count = min_weekend_O + nPHs;
+int: max_O_count = nWeekends + nPHs;
+function array[DAYS] of var DUTIES: staff_masked_roster(STAFFS: i, array[DAYS] of var DUTIES: staff_roster) =
+    array1d(DAYS, [staff_roster[j] | j in DAYS]);
+predicate rules2 = (forall(i in STAFFS) (
+    let {
+        array[DAYS] of var DUTIES: masked = staff_masked_roster(i, row(roster,i))
+    } in global_cardinality(masked, OFF, [min_O_count], [max_O_count])
+));
+
+% Rule 3: constraint of >=2 weekend Os for every nurse in a month
+predicate rules3 = (forall(i in STAFFS) (
+    global_cardinality([roster[i,j] | j in weekends], OFF, [min_weekend_O], [nWeekends])
+));
+
+% Rule 4: constraint of no both-P for the same weekend
+%predicate rules4 = (forall(i in STAFFS) (
+%    forall(j in weekends where enum_next(j) in weekends) (
+%        roster[i,j] == P -> roster[i,enum_next(j)] != P
+%    )
+%));
+
+% Rule 5: constraint of min # of nurses of all types in every N/A/P duties
+predicate ward_req(array[STAFFS] of var DUTIES: a) = (
+    global_cardinality(a, SHIFTS, col(MIN_WARD,total), [nStaffs | _ in SHIFTS]) /\  % upper bound can be more tightened
+    forall(i in TYPES, j in MINS where (i, j) in TYPE_MINS) (
+        let {
+            array[SHIFTS] of int: d = [col(MIN_WARD,j)[k] | k in SHIFTS],
+            array[SHIFTS] of int: e = [row(TYPE_MAXS,i)[k] | k in SHIFT_MAXS]
+        } in 
+        global_cardinality(a[TYPE_STAFFS[i]], SHIFTS, d, e))
+);
+predicate rules5 = (forall(i in DAYS) (
+    ward_req(col(roster,i))
+));
+
+% Rule 6: constraint of normal N requirement
+int: Q1 = 7;
+int: q0 = 1;
+set of int: STATE1 = 1..Q1;
+array[STATE1, DUTIES] of int: t1 = 
+  [| 2, 1, 1, 1      % state 1 (allow N at the 1st day)
+   | 0, 0, 0, 1 |];  % state 2 (can only have O)
+predicate rules6 = (forall(i in STAFFS where not (i in TYPE_STAFFS[NIGHT])) (
+    regular(row(roster,i), Q1, nDuties, t1, q0, STATE1)
+));
+
+% Rule 7: constraint of 2Os for consecutive 4Ns in a row
+int: Q2 = 6;
+set of int: STATE2 = 1..Q2;
+array[STATE3, DUTIES] of int: t2 = 
+  [| 2, 0, 0, 1      % state 1
+   | 3, 0, 0, 1      % state 2
+   | 4, 0, 0, 1      % state 3 
+   | 5, 0, 0, 1      % state 4
+   | 0, 0, 0, 6      % state 5 (cannot N again)
+   | 0, 0, 0, 1 |];  % state 6 (cannot N again)
+predicate rules7 = (forall(i in TYPE_STAFFS[NIGHT]) (
+    regular(row(roster,i), Q2, nDuties, t2, q0, STATE2)
+));
+
+% Rule 8: constraint of no consecutive 3A/3P and NPA/NPP sequence for every nurse in a row
+int: Q3 = 7;
+set of int: STATE3 = 1..Q3;
+array[STATE3, DUTIES] of int: t3 = 
+  [| 4, 2, 3, 1      % state 1
+   | 4, 5, 3, 1      % state 2
+   | 4, 2, 6, 1      % state 3 
+   | 4, 2, 7, 1      % state 4
+   | 4, 0, 3, 1      % state 5 (cannot A again)
+   | 4, 2, 0, 1      % state 6 (cannot P again)
+   | 4, 0, 0, 1 |];  % state 7 (cannot A/P again)
+predicate rules8 = (forall(i in STAFFS) (
+    regular(row(roster,i), Q3, nDuties, t3, q0, STATE3)
+));
+
+% Rule 9: constraint of at least 1 O for every nurse in every consecutive MW days
+int: Q4 = MW;
+set of int: STATE4 = 1..Q4;
+array[STATE4,DUTIES] of int: t4 = array2d(STATE4, DUTIES, [if j == O then q0 else i endif | i in 2..MW, j in DUTIES] ++
+                                                          [0,0,0,q0]);
+predicate rules9 = (forall(i in STAFFS where not (i in TYPE_STAFFS[NIGHT])) (
+    regular(row(roster,i), Q4, nDuties, t4, q0, STATE4)
+));
+
+% Rule 10: constraint of staff entitled annual leaves
+%predicate rules10 = forall(i in STAFFS, j in DAYS) (
+%    is_annual_leave[i,j] -> roster[i,j] == O
+%);
+
+% Rule 11: constraint of requested long night duties   
+%array[STAFFS, DAYS] of opt DUTIES: long_night_duties = 
+%    array2d(STAFFS, DAYS, [get_long_night_duty(i,j) | i in STAFFS, j in DAYS]);
+%function opt DUTIES: get_long_night_duty(STAFFS: s, DAYS: d) =
+%    let {
+%        int: row = long_night_row(s, d),
+%        int: day_offset = d - if row > 0 then long_nights[row,2] else 0 endif + 1
+%    } in if row == 0 then <> else to_enum(DUTIES, long_nights[row, 2 + day_offset]) endif;
+%predicate rules11 = forall(i in STAFFS, j in DAYS) (
+%    occurs(long_night_duties[i,j]) -> roster[i,j] == long_night_duties[i,j]
+%);
+
+% Rule 12: constraint of >=1 public holiday Os for every nurse in a month if # of public holidays >= 3
+int: min_ph_O = round((nPHs-1)/3);
+predicate rules12 = (forall(i in STAFFS) (
+    global_cardinality([roster[i,j] | j in public_holidays], OFF, [min_ph_O], [nPHs])
+));
+
+% Objective functions
+%var int: score1 = sum([roster[i,j] == P /\ roster[i,enum_next(j)] == A | i in STAFFS, j in DAYS where enum_next(j) in DAYS]);
+%var int: score2 = sum([roster[i,j] == N /\ roster[i,enum_next(j)] == P | i in STAFFS, j in DAYS where enum_next(j) in DAYS]);
+%var int: score3 = sum([roster[i,j] == P /\ roster[i,enum_next(j)] == O /\ roster[i,enum_next(enum_next(j))] == A 
+%                  | i in STAFFS, j in DAYS where enum_next(j) in DAYS /\ enum_next(enum_next(j)) in DAYS]);
+var int: score4 = length(STAFF_REQ_DUTIES) - sum([roster[i,j] == k | i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES]);
+var int: score5 = sum([max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in TYPE_STAFFS[NIGHT])]) | i in SHIFTS]);
+var int: score6 = sum([diff_ap(staff_duty_counts[i,A],staff_duty_counts[i,P]) | i in STAFFS]);
+var int: score7 = sum([max_diff_manpower(col(ward_shift_manpower,i)) | i in SHIFTS]);
+
+solve :: int_search(roster, first_fail, indomain_min) maximize 0 - score4 * 100 - score5 * 80 - score6 * 30 - score7 * 50;
+
+% Helper functions
+function WEEKDAYS: weekday(DAYS: day) = 
+    let {
+        int: temp = (enum2int(day) - enum2int(C(1)) + enum2int(MONTH_START)) mod 7
+    } in
+    if (temp == 0) then Sun else to_enum(WEEKDAYS, temp) endif;
+
+function string: format_duty(STAFFS: staff, DAYS: day) = 
+    let {
+        array[DUTIES] of bool: temp = [(staff,day,i) in STAFF_REQ_DUTIES | i in DUTIES],
+        DUTIES: duty = fix(roster[staff,day])
+    } in
+    if xorall(temp) /\ not ((staff,day,duty) in STAFF_REQ_DUTIES) then lowercase[duty] else format(duty) endif;
+    /*if temp[duty] then format(duty) elseif xorall(temp) then lowercase[duty] else " " endif;*/
+
+function array[int] of ReqDuties: req_duties(array[int, int] of int: input) = 
+    [(to_enum(STAFFS, input[i,1]), 
+      to_enum(DAYS, input[i,2]), 
+      to_enum(DUTIES, input[i,3])) | i in 1..length(col(input,1))];
+
+function string: format_shift(set of STAFFS: staffs) =
+    join("",[show(card(staffs intersect TYPE_STAFFS[typ])) | typ in TYPES]);
+
+function var int: max_diff_shifts(array[int] of var int: input) = max(input) - min(input);
+
+function var int: diff_ap(var int: a, var int: p) = 
+    let {
+        var int: temp = abs(a-p)
+    } in 
+    if (a+p) mod 2 == 1 /\ temp == 1 then 0 else temp endif;
+    
+function var int: max_diff_manpower(array[DAYS] of var int: input) = max(input) - min(input); 
+
+% Verify data input and derived parameters
+output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
+output ["Whole calendar: "] ++ [show(DAY_WEEKDAYS)] ++ ["\n"];
+output ["Available weekends: "] ++ [show(weekends)] ++ ["\n"];
+output ["Available teachers: "] ++ [show(card(TYPE_STAFFS[i])) ++ " " | i in TYPES] ++ ["\n"];
+output ["Index sets of MIN_WARD: "] ++ [show(index_set_1of2(MIN_WARD)) ++ "\t" ++ show(index_set_2of2(MIN_WARD))] ++ ["\n"];
+output ["Min staffs in N/A/P: \n"] ++ [show2d(MIN_WARD)] ++ ["\n"];
+output ["Index sets of TYPE_MAXS: "] ++ [show(index_set_1of2(TYPE_MAXS)) ++ "\t" ++ show(index_set_2of2(TYPE_MAXS))] ++ ["\n"];
+output ["Max Ns/Ps/As/Offs in TYPES: \n"] ++ [show2d(TYPE_MAXS)] ++ ["\n"];
+output [show(length(STAFF_REQ_DUTIES)) ++ " STAFF_REQ_DUTIES: \n"] ++ [show(STAFF_REQ_DUTIES)] ++ ["\n"];
+output [show(length(WARD_REQ_DUTIES)) ++ " WARD_REQ_DUTIES: \n"] ++ [show(WARD_REQ_DUTIES)] ++ ["\n"];
+
+% Result printing
+output[show(i) ++ "\t" ++ join("\n",[if (j != N) then "\t" endif ++ show(j) ++ " " ++ show(fix(ward_shift_manpower[i,j])) ++ " " ++ show(fix(ward[i,j])) | j in SHIFTS]) ++ "\n" | i in DAYS];
+output["\t" ++ join(" ",[if i in {C(1),X(1)} then "1" else " " endif | i in DAYS]) ++ "\n"];
+output["\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) ++ "\t" ++ join("\t",[show(i) | i in DUTIES]) ++ "\n"];
+output[show(i) ++ "\t" ++ join(" ",[format_duty(i,j) | j in DAYS]) ++ "\t" ++ join("\t",[show(fix(staff_duty_counts[i,j])) | j in DUTIES]) ++ "\n" | i in STAFFS];
+output["# of re-duty non-fulfillments= " ++ show(fix(score4)) ++ "\n"];
+output["Total # of max shift diffs= " ++ show(fix(score5)) ++ "\tTotal # of A/P diffs= " ++ show(fix(score6)) ++"\n"];
+output["Total # of max ward manpower diffs= " ++ show(fix(score7)) ++"\n"];
