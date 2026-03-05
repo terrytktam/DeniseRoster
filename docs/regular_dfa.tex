@@ -11,13 +11,13 @@ initial text=$ $, % sets the text that appears on the start arrow
 \section{Normal teachers}
 \subsection{Normal N requirement (allow first day = N)}
 \begin{tabular}{cc}
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|}
 \hline
-&\tt N&	\tt A&\tt P&\tt O\\
+&\tt N&	\tt A&\tt P&\tt O&\tt D\\
 \hline
-$1$&$2$&$1$&$1$&$1$\\
+$1$&$2$&$1$&$1$&$1$&$1$\\
 \hline
-$2$&$0$&$0$&$0$&$1$\\
+$2$&$0$&$0$&$0$&$1$&$0$\\
 \hline
 \end{tabular}
 &
@@ -25,7 +25,7 @@ $2$&$0$&$0$&$0$&$1$\\
   \node[state, initial] (q1) {$1$};  
   \node[state, right of=q1] (q2) {$2$};
   
-  \draw (q1) edge[loop above] node{\tt A,P,O} (q2)
+  \draw (q1) edge[loop above] node{\tt A,P,O,D} (q2)
   		(q1) edge[bend left=30, above] node{\tt N} (q2)
 		(q2) edge[bend left=30, below] node{\tt O} (q1);
 
@@ -34,21 +34,21 @@ $2$&$0$&$0$&$0$&$1$\\
 \subsection{At least 1 O for consecutive NW days}
 \begin{tabular}{cc}
 $NW = 6$\\
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|}
 \hline
-&\tt N&\tt A&\tt P&\tt O\\
+&\tt N&\tt A&\tt P&\tt O&\tt D\\
 \hline
-$1$&$2$&$2$&$2$&$1$\\
+$1$&$2$&$2$&$2$&$1$&$2$\\
 \hline
-$2$&$3$&$3$&$3$&$1$\\
+$2$&$3$&$3$&$3$&$1$&$3$\\
 \hline
-$3$&$4$&$4$&$4$&$1$\\
+$3$&$4$&$4$&$4$&$1$&$4$\\
 \hline
-$4$&$5$&$5$&$5$&$1$\\
+$4$&$5$&$5$&$5$&$1$&$5$\\
 \hline
-$5$&$6$&$6$&$6$&$1$\\
+$5$&$6$&$6$&$6$&$1$&$6$\\
 \hline
-$6$&$0$&$0$&$0$&$1$\\
+$6$&$0$&$0$&$0$&$1$&$0$\\
 \hline
 \end{tabular}
 &
@@ -61,11 +61,11 @@ $6$&$0$&$0$&$0$&$1$\\
   \node[state, below of=q5] (q6) {$6$};
   
   \draw (q1) edge[loop below] node{\tt O} (q1)
-  		(q1) edge[above] node{\tt A,P,N} (q2)
-  		(q2) edge[above] node{\tt A,P,N} (q3)
-  		(q3) edge[above] node{\tt A,P,N} (q4)
-  		(q4) edge[above] node{\tt A,P,N} (q5)
-  		(q5) edge[right] node{\tt A,P,N} (q6)
+  		(q1) edge[above] node{\tt A,P,N,D} (q2)
+  		(q2) edge[above] node{\tt A,P,N,D} (q3)
+  		(q3) edge[above] node{\tt A,P,N,D} (q4)
+  		(q4) edge[above] node{\tt A,P,N,D} (q5)
+  		(q5) edge[right] node{\tt A,P,N,D} (q6)
   		(q2) edge[bend left, above] node{\tt O} (q1)
   		(q3) edge[bend left, above] node{\tt O} (q1)
   		(q4) edge[bend left, above] node{\tt O} (q1)
@@ -77,21 +77,21 @@ $6$&$0$&$0$&$0$&$1$\\
 \section{Night teachers}
 \subsection{At least 2 Os for consecutive 4 Ns}
 \begin{tabular}{cc}
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|}
 \hline
-&\tt N&\tt A&\tt P&\tt O\\
+&\tt N&\tt A&\tt P&\tt O&\tt D\\
 \hline
-$1$&$2$&$0$&$0$&$1$\\
+$1$&$2$&$0$&$0$&$1$&$0$\\
 \hline
-$2$&$3$&$0$&$0$&$1$\\
+$2$&$3$&$0$&$0$&$1$&$0$\\
 \hline
-$3$&$4$&$0$&$0$&$1$\\
+$3$&$4$&$0$&$0$&$1$&$0$\\
 \hline
-$4$&$5$&$0$&$0$&$1$\\
+$4$&$5$&$0$&$0$&$1$&$0$\\
 \hline
-$5$&$0$&$0$&$0$&$6$\\
+$5$&$0$&$0$&$0$&$6$&$0$\\
 \hline
-$6$&$0$&$0$&$0$&$1$\\
+$6$&$0$&$0$&$0$&$1$&$0$\\
 \hline
 \end{tabular}
 &
