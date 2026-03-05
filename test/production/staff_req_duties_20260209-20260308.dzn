@@ -1,4 +1,4 @@
-staff_requested_duties = [|
+staff_req_duties = [|
  LYG(1), C(6), O |
  LYG(2), C(26), A |
  LYG(2), C(28), O |

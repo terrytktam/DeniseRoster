@@ -4,10 +4,9 @@ nDRAGONFLY = 5;
 nBEE = 5;
 nNIGHT = 4;
 MW = 6;
-min_ward = [| N, 3, 0, 0, 0, 0      % min # of total, BEETLE, BUTTERFLY, DRAGONFLY, BEE staffs at N
-            | A, 0, 1, 1, 1, 1      % min # of total, BEETLE, BUTTERFLY, DRAGONFLY, BEE staffs at A
-            | P, 0, 1, 1, 1, 1|];   % min # of total, BEETLE, BUTTERFLY, DRAGONFLY, BEE staffs at P
-max_rn3 = [1, 2, 2];                % max # of RN3 at N,A,P
+min_ward = [| N, 0, 0, 0, 0, 3      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
+            | A, 1, 1, 1, 1, 0      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 1, 1, 1, 1, 0|];   % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
 
 active_constraints = [
   true, % ward request duty constraint
