@@ -15,7 +15,8 @@ enum RULES = {WardReqDuty,            % ward request duty constraint
               NormalOffFrequency,     % at least 1 O for NW days constraint (mandatory)
               ReqAnnualLeaves,        % requested annual leaves (mandatory)
               LongNightDuties,        % requested long night duties (mandatory)
-              PublicHolidayOff        % # of public holiday O constraint
+              PublicHolidayOff,       % # of public holiday O constraint
+              WardDayDuty             % ward requested D duty constraint
               };
 enum MINS = { shift, ladybug, butterfly, dragonfly, bee, night };
 array[DUTIES] of string: lowercase = ["n", "a", "p", "o", "d"];
@@ -72,12 +73,8 @@ int: nDays = card(DAYS);
 
 % Derived Parameters
 array[CLASSES] of set of STAFFS: CLASS_STAFFS = [LYG(1..nLADYBUG), BFY(1..nBUTTERFLY), DNY(1..nDRAGONFLY), BEE(1..nBEE), NGT(1..nNIGHT)];
-array[int] of int: MIN_WARD = (
-    let {
-        array[SHIFTS, MINS] of int: temp = array2d(SHIFTS, MINS, min_ward)
-    } in [temp[i,k] | i in SHIFTS where i != N, j in CLASSES where j != NIGHT, k in MINS where (j,k) in CLASS_MINS] ++ [temp[N,night]]
-);
-array[int] of int: MAX_WARD = [2 | i in SHIFTS where i != N, j in CLASSES where j != NIGHT] ++ [3];
+array[int] of int: MIN_WARD = convert(min_ward);
+array[int] of int: MAX_WARD = convert(max_ward);
 
 % Derived Parameters (for requested duties)
 array[int] of ReqDuties: STAFF_REQ_DUTIES = req_duties(staff_req_duties);
@@ -139,6 +136,7 @@ constraint active_constraints[NormalOffFrequency] -> rules9();
 %constraint active_constraints[ReqAnnualLeaves] -> rules10();
 %constraint active_constraints[LongNightDuties] -> rules11();
 constraint active_constraints[PublicHolidayOff] -> rules12();
+constraint active_constraints[WardDayDuty] -> rules13();
 
 % Rule 1: constraint of matching roster with WARD_REQ_DUTIES
 predicate rules1 = forall(i in STAFFS, j in DAYS, k in DUTIES where has_element((i,j,k), WARD_REQ_DUTIES)) (
@@ -243,17 +241,27 @@ predicate rules12 = (forall(i in STAFFS) (
     global_cardinality([assignment_to_duty(roster[i,j]) | j in public_holidays], OFF, [min_ph_O], [nPHs])
 ));
 
+% Rule 13: constraint of D duty must appear in WARD_REQ_DUTIES
+predicate rules13 = forall(i in STAFFS, j in DAYS) (
+    assignment_to_duty(roster[i,j]) == D -> has_element((i,j,D), WARD_REQ_DUTIES)
+);
+
 % Objective functions
-var int: score1 = sum([home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
-%var int: score2 = sum([roster[i,j] == N /\ roster[i,enum_next(j)] == P | i in STAFFS, j in DAYS where enum_next(j) in DAYS]);
-%var int: score3 = sum([roster[i,j] == P /\ roster[i,enum_next(j)] == O /\ roster[i,enum_next(enum_next(j))] == A 
-%                  | i in STAFFS, j in DAYS where enum_next(j) in DAYS /\ enum_next(enum_next(j)) in DAYS]);
+var int: score1 = sum([not home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
+%var int: score2 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
+%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == O /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
+%                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(j))) in DAYS]);
+%var int: score3 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
+%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == N /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
+%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(j))))]) == O 
+%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(enum_next(j)))))]) == N
+%                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(enum_next(enum_next(j))))) in DAYS]);
 var int: score4 = length(STAFF_REQ_DUTIES) - sum([assignment_to_duty(roster[i,j]) == k | i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES]);
 var int: score5 = sum([max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]) | i in SHIFTS]);
 var int: score6 = sum([diff_ap(staff_duty_counts[i,A],staff_duty_counts[i,P]) | i in STAFFS]);
 var int: score7 = sum([max_diff_manpower(col(ward_shift_manpower,i)) | i in ASSIGNMENTS]);
 
-solve :: int_search(roster, first_fail, indomain_min) maximize score1 - score4 - score5 - score6 - score7;
+solve :: int_search(roster, first_fail, indomain_min) minimize score1 /*+ score2 + score3*/ + score4 + score5 + score6 + score7;
 
 % Helper functions
 function var DUTIES: assignment_to_duty(var ASSIGNMENTS0: index) = allAssignments[index].duty;
@@ -278,6 +286,11 @@ function string: format_class(STAFFS: staff, DAYS: day) =
     let {
         ASSIGNMENTS0: assignment = fix(roster[staff,day])
     } in if assignment in ASSIGNMENTS then shortform[fix(assignment_to_class(assignment))] else " " endif;
+
+function array[int] of int: convert(array[int, int] of int: input) = 
+    let {
+        array[SHIFTS, MINS] of int: temp = array2d(SHIFTS, MINS, input)
+    } in [temp[i,k] | i in SHIFTS where i != N, j in CLASSES where j != NIGHT, k in MINS where (j,k) in CLASS_MINS] ++ [temp[N,night]];
 
 function array[int] of ReqDuties: req_duties(array[int, int] of int: input) = 
     [(to_enum(STAFFS, input[i,1]), 
@@ -309,6 +322,7 @@ output["\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) 
        "\t\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) ++ "\n"];
 output[show(i) ++ "\t" ++ join(" ",[format_duty(i,j) | j in DAYS]) ++ "\t" ++ join("\t",[show(fix(staff_duty_counts[i,j])) | j in DUTIES]) ++ "\t" ++
         show(i) ++ "\t" ++ join(" ",[format_class(i,j) | j in DAYS]) ++ "\n" | i in STAFFS];
+output["# of non-home class assignments = " ++ show(fix(score1)) /*++ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3))*/ ++ "\n"];
 output["# of re-duty non-fulfillments= " ++ show(fix(score4)) ++ "\n"];
 output["Total # of max shift diffs= " ++ show(fix(score5)) ++ "\tTotal # of A/P diffs= " ++ show(fix(score6)) ++"\n"];
 output["Total # of max ward manpower diffs= " ++ show(fix(score7)) ++"\n"];

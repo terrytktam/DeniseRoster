@@ -9,8 +9,8 @@ min_ward = [| N, 0, 0, 0, 0, 3      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE
             | A, 1, 1, 1, 1, 0      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
             | P, 1, 1, 1, 1, 0|];   % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
 max_ward = [| N, 0, 0, 0, 0, 3      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
-            | A, 1, 1, 1, 1, 0      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
-            | P, 3, 2, 3, 3, 0|];   % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
+            | A, 1, 1, 2, 2, 0      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 2, 1, 2, 2, 0|];   % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
 
 active_constraints = [
   true, % ward request duty constraint
@@ -25,4 +25,5 @@ active_constraints = [
   false, % requested annual leaves (mandatory) [false]
   false, % requested long night duties (mandatory) [false]
   true, % # of public holiday O constraint
+  true, % ward requested D duty constraint
 ];
