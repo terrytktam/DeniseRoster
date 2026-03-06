@@ -80,6 +80,29 @@ ward_req_duties = [|
  DNY(1), V(6), P |
  DNY(1), V(7), O |
  DNY(1), C(7), D |
+ DNY(1), C(8), O |
+ DNY(1), C(9), O |
+ DNY(1), C(10), O |
+ DNY(1), C(11), O |
+ DNY(1), C(12), O |
+ DNY(1), C(13), O |
+ DNY(1), C(14), O |
+ DNY(1), C(15), O |
+ DNY(1), C(16), O |
+ DNY(1), C(17), O |
+ DNY(1), C(18), O |
+ DNY(1), C(19), O |
+ DNY(1), C(20), O |
+ DNY(1), C(21), O |
+ DNY(1), C(22), O |
+ DNY(1), C(23), O |
+ DNY(1), C(24), O |
+ DNY(1), C(25), O |
+ DNY(1), C(26), O |
+ DNY(1), C(27), O |
+ DNY(1), C(28), O |
+ DNY(1), X(1), O |
+ DNY(1), X(2), O |
  DNY(2), V(1), A |
  DNY(2), V(2), A |
  DNY(2), V(3), A |
@@ -107,6 +130,20 @@ ward_req_duties = [|
  DNY(4), V(7), A |
  DNY(4), C(4), D |
  DNY(4), C(24), D |
+ DNY(5), V(1), O |
+ DNY(5), V(2), O |
+ DNY(5), V(3), O |
+ DNY(5), V(4), O |
+ DNY(5), V(5), O |
+ DNY(5), V(6), O |
+ DNY(5), V(7), O |
+ DNY(5), C(1), O |
+ DNY(5), C(2), O |
+ DNY(5), C(3), O |
+ DNY(5), C(4), O |
+ DNY(5), C(5), O |
+ DNY(5), C(6), O |
+ DNY(5), C(7), O |
  DNY(5), C(14), D |
  DNY(5), C(27), D |
  BEE(1), V(1), O |
@@ -125,6 +162,29 @@ ward_req_duties = [|
  BEE(2), V(5), D |
  BEE(2), V(6), O |
  BEE(2), V(7), A |
+ BEE(2), C(8), O |
+ BEE(2), C(9), O |
+ BEE(2), C(10), O |
+ BEE(2), C(11), O |
+ BEE(2), C(12), O |
+ BEE(2), C(13), O |
+ BEE(2), C(14), O |
+ BEE(2), C(15), O |
+ BEE(2), C(16), O |
+ BEE(2), C(17), O |
+ BEE(2), C(18), O |
+ BEE(2), C(19), O |
+ BEE(2), C(20), O |
+ BEE(2), C(21), O |
+ BEE(2), C(22), O |
+ BEE(2), C(23), O |
+ BEE(2), C(24), O |
+ BEE(2), C(25), O |
+ BEE(2), C(26), O |
+ BEE(2), C(27), O |
+ BEE(2), C(28), O |
+ BEE(2), X(1), O |
+ BEE(2), X(2), O |
  BEE(3), V(1), N |
  BEE(3), V(2), O |
  BEE(3), V(3), P |
@@ -143,6 +203,20 @@ ward_req_duties = [|
  BEE(4), V(7), O |
  BEE(4), C(7), D |
  BEE(4), C(13), D |
+ BEE(5), V(1), O |
+ BEE(5), V(2), O |
+ BEE(5), V(3), O |
+ BEE(5), V(4), O |
+ BEE(5), V(5), O |
+ BEE(5), V(6), O |
+ BEE(5), V(7), O |
+ BEE(5), C(1), O |
+ BEE(5), C(2), O |
+ BEE(5), C(3), O |
+ BEE(5), C(4), O |
+ BEE(5), C(5), O |
+ BEE(5), C(6), O |
+ BEE(5), C(7), O |
  BEE(5), C(18), D |
  NGT(1), V(1), N |
  NGT(1), V(2), N |
@@ -172,4 +246,3 @@ ward_req_duties = [|
  NGT(4), V(5), O |
  NGT(4), V(6), O |
  NGT(4), V(7), O |];
-

@@ -9,6 +9,7 @@
     ],
     "openTab": 0,
     "projectFiles": [
+        "class_roster.mpc",
         "class_roster.mzn",
         "test/production/calendar_20260209-20260308.dzn",
         "test/production/call_req_duties_20260209-20260308.dzn",
@@ -16,7 +17,6 @@
         "test/production/ward_req_duties_20260209-20260308.dzn",
         "test/production/ward_standard_20260209-20260308.dzn"
     ],
-    "selectedBuiltinConfigId": "cp-sat",
-    "selectedBuiltinConfigVersion": "9.15.6755",
+    "selectedSolverConfigFile": "class_roster.mpc",
     "version": 106
 }

@@ -8,11 +8,14 @@ nCO = 6;
 min_ward = [| N, 0, 0, 0, 0, 3      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
             | A, 1, 1, 1, 1, 0      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
             | P, 1, 1, 1, 1, 0|];   % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
+max_ward = [| N, 0, 0, 0, 0, 3      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
+            | A, 1, 1, 1, 1, 0      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 3, 2, 3, 3, 0|];   % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
 
 active_constraints = [
   true, % ward request duty constraint
   true, % contract O + public holiday O entitlement constraint
-  false, % ??? constraint [false]
+  false, % # of weekend O constraint
   false, % no weekend PP constraint (mandatory) [false]
   true, % daily ward requirement constraint (mandatory)
   true, % normal AN constraint
