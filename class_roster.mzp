@@ -7,7 +7,7 @@
         "test/production/ward_req_duties_20260209-20260308.dzn",
         "test/production/call_req_duties_20260209-20260308.dzn"
     ],
-    "openTab": 5,
+    "openTab": 0,
     "projectFiles": [
         "class_roster.mzn",
         "test/production/calendar_20260209-20260308.dzn",

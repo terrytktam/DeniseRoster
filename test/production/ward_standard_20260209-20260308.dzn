@@ -12,14 +12,14 @@ min_ward = [| N, 0, 0, 0, 0, 3      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE
 active_constraints = [
   true, % ward request duty constraint
   true, % contract O + public holiday O entitlement constraint
-  false, % ??? constraint
-  false, % no weekend PP constraint (mandatory)
+  false, % ??? constraint [false]
+  false, % no weekend PP constraint (mandatory) [false]
   true, % daily ward requirement constraint (mandatory)
   true, % normal AN constraint
   true, % at least 2 Os for 4Ns constraint (mandatory)
   true, % call night then O constraint (mandatory)
   true, % at least 1 O for NW days constraint (mandatory)
-  false, % requested annual leaves (mandatory)
-  false, % requested long night duties (mandatory)
+  false, % requested annual leaves (mandatory) [false]
+  false, % requested long night duties (mandatory) [false]
   true, % # of public holiday O constraint
 ];

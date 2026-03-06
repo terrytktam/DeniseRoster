@@ -62,7 +62,7 @@ set of ASSIGNMENTS0: ASSIGNMENTS = 1..9;    % 4 classes for A/P + 1 night
 
 % Derived Parameters (for cross-month calendar generation)
 int: nPrevMthDays = 7;
-int: nNextMthDays = 1;
+int: nNextMthDays = 2;
 enum DAYS = V(1..nPrevMthDays) ++ C(1..nRosterDays) ++ X(1..nNextMthDays);
 %array[DAYS] of WEEKDAYS: DAY_WEEKDAYS = [weekday(i) | i in DAYS];
 %set of DAYS: weekends = array2set([i | i in DAYS where DAY_WEEKDAYS[i] in WEEKEND]);
@@ -140,7 +140,7 @@ constraint active_constraints[PublicHolidayOff] -> rules12();
 
 % Rule 1: constraint of matching roster with WARD_REQ_DUTIES
 predicate rules1 = forall(i in STAFFS, j in DAYS, k in DUTIES where has_element((i,j,k), WARD_REQ_DUTIES)) (
-    roster[i,j] == k
+    assignment_to_duty(roster[i,j]) == k
 );
 
 % Rule 2: constraint of # of Os (contract + public holidays) for every nurse in a month
@@ -203,9 +203,8 @@ predicate rules8 = (forall(i in DAYS where i in call_req_duties /\ enum_next(i) 
     let {
         array[STAFFS] of var ASSIGNMENTS0: today = col(roster,i),
         array[STAFFS] of var ASSIGNMENTS0: tomorrow = col(roster,enum_next(i))
-    } in forall(j in STAFFS) (
-        assignment_to_duty(today[j]) == P /\ assignment_to_duty(tomorrow[j]) == O /\ call[i] == j
-)));
+    } in occurs(call[i]) /\ assignment_to_duty(today[deopt(call[i])]) == P /\ assignment_to_duty(tomorrow[deopt(call[i])]) == O
+));
 
 % Rule 9: constraint of at least 1 O for every nurse in every consecutive MW days
 int: Q4 = MW;
@@ -242,7 +241,7 @@ predicate rules12 = (forall(i in STAFFS) (
 ));
 
 % Objective functions
-%var int: score1 = sum([roster[i,j] == P /\ roster[i,enum_next(j)] == A | i in STAFFS, j in DAYS where enum_next(j) in DAYS]);
+var int: score1 = sum([home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
 %var int: score2 = sum([roster[i,j] == N /\ roster[i,enum_next(j)] == P | i in STAFFS, j in DAYS where enum_next(j) in DAYS]);
 %var int: score3 = sum([roster[i,j] == P /\ roster[i,enum_next(j)] == O /\ roster[i,enum_next(enum_next(j))] == A 
 %                  | i in STAFFS, j in DAYS where enum_next(j) in DAYS /\ enum_next(enum_next(j)) in DAYS]);
@@ -256,6 +255,7 @@ solve :: int_search(roster, first_fail, indomain_min) maximize 0 - score4 * 100 
 % Helper functions
 function var DUTIES: assignment_to_duty(var ASSIGNMENTS0: index) = allAssignments[index].duty;
 function var CLASSES: assignment_to_class(var ASSIGNMENTS0: index) = to_enum(CLASSES, allAssignments[index].place);
+function var bool: home_class_assigned(STAFFS: staff, var ASSIGNMENTS0: index) = staff in CLASS_STAFFS[assignment_to_class(index)];
 
 %function WEEKDAYS: weekday(DAYS: day) = 
 %    let {
@@ -268,7 +268,7 @@ function string: format_duty(STAFFS: staff, DAYS: day) =
         array[DUTIES] of bool: temp = [(staff,day,i) in STAFF_REQ_DUTIES | i in DUTIES],
         DUTIES: duty = fix(assignment_to_duty(roster[staff,day]))
     } in
-    if xorall(temp) /\ not ((staff,day,duty) in STAFF_REQ_DUTIES) then lowercase[duty] else format(duty) endif;
+    if xorall(temp) /\ not ((staff,day,duty) in STAFF_REQ_DUTIES) then lowercase[duty] elseif fix(call[day]) == staff then "C" else format(duty) endif;
     /*if temp[duty] then format(duty) elseif xorall(temp) then lowercase[duty] else " " endif;*/
 
 function array[int] of ReqDuties: req_duties(array[int, int] of int: input) = 
