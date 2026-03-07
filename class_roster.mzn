@@ -248,12 +248,12 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 
 % Objective functions
 %var int: score1 = sum([not home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
-var int: score2 = sum([count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, O, N]) | i in STAFFS]);
-var int: score3 = sum([count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, N, N, O, N]) | i in STAFFS]);
-var int: score4 = length(STAFF_REQ_DUTIES) - sum([assignment_to_duty(roster[i,j]) == k | i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES]);
-var int: score5 = sum([max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]) | i in SHIFTS]);
-var int: score6 = sum([diff_ap(staff_duty_counts[i,A],staff_duty_counts[i,P]) | i in STAFFS]);
-var int: score7 = sum([max_diff_manpower(col(ward_shift_manpower,i)) | i in ASSIGNMENTS]);
+var int: score2 = sum(i in STAFFS) (count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, O, N]));
+var int: score3 = sum(i in STAFFS) (count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, N, N, O, N]));
+var int: score4 = length(STAFF_REQ_DUTIES) - sum(i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i,j]) == k);
+var int: score5 = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
+var int: score6 = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
+var int: score7 = sum(i in ASSIGNMENTS) (max_diff_manpower(col(ward_shift_manpower,i)));
 
 solve :: int_search(roster, first_fail, indomain_min) minimize /*score1 +*/ score2 + score3 + score4 + score5 + score6 + score7;
 
