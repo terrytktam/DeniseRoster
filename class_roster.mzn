@@ -248,14 +248,8 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 
 % Objective functions
 %var int: score1 = sum([not home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
-var int: score2 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
-                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == O /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
-                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(j))) in DAYS]);
-var int: score3 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
-                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == N /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
-                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(j))))]) == O 
-                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(enum_next(j)))))]) == N
-                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(enum_next(enum_next(j))))) in DAYS]);
+var int: score2 = sum([count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, O, N]) | i in STAFFS]);
+var int: score3 = sum([count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, N, N, O, N]) | i in STAFFS]);
 var int: score4 = length(STAFF_REQ_DUTIES) - sum([assignment_to_duty(roster[i,j]) == k | i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES]);
 var int: score5 = sum([max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]) | i in SHIFTS]);
 var int: score6 = sum([diff_ap(staff_duty_counts[i,A],staff_duty_counts[i,P]) | i in STAFFS]);
@@ -306,6 +300,11 @@ function var int: diff_ap(var int: a, var int: p) =
     if (a+p) mod 2 == 1 /\ temp == 1 then 0 else temp endif;
     
 function var int: max_diff_manpower(array[DAYS] of var int: input) = max(input) - min(input); 
+
+function var int: count_subseq(array[int] of var DUTIES: main, array[int] of DUTIES: pat) =
+    let { int: m = length(main),
+          int: n = length(pat)
+    } in if n > m then 0 else sum(i in 1..m-n+1) (forall(j in 1..n)(main[i+j-1] == pat[j])) endif;
 
 % Verify data input and derived parameters
 output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
