@@ -247,15 +247,14 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 );
 
 % Objective functions
-%var int: score1 = sum([not home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
+var int: score1 = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));
 var int: score2 = sum(i in STAFFS) (count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, O, N]));
 var int: score3 = sum(i in STAFFS) (count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, N, N, O, N]));
 var int: score4 = length(STAFF_REQ_DUTIES) - sum(i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i,j]) == k);
 var int: score5 = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
 var int: score6 = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
-var int: score7 = sum(i in ASSIGNMENTS) (max_diff_manpower(col(ward_shift_manpower,i)));
 
-solve :: int_search(roster, first_fail, indomain_min) minimize /*score1 +*/ score2 + score3 + score4 + score5 + score6 + score7;
+solve :: int_search(roster, first_fail, indomain_min) minimize score1 + score2 + score3 + score4 + score5 + score6;
 
 % Helper functions
 function var DUTIES: assignment_to_duty(var ASSIGNMENTS0: index) = allAssignments[index].duty;
@@ -298,8 +297,6 @@ function var int: diff_ap(var int: a, var int: p) =
         var int: temp = abs(a-p)
     } in 
     if (a+p) mod 2 == 1 /\ temp == 1 then 0 else temp endif;
-    
-function var int: max_diff_manpower(array[DAYS] of var int: input) = max(input) - min(input); 
 
 function var int: count_subseq(array[int] of var DUTIES: main, array[int] of DUTIES: pat) =
     let { int: m = length(main),
@@ -311,8 +308,8 @@ output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
 output ["Whole calendar: "] ++ [show(DAY_WEEKDAYS)] ++ ["\n"];
 output ["Available weekends: "] ++ [show(weekends)] ++ ["\n"];
 output ["Available teachers: "] ++ [show(card(CLASS_STAFFS[i])) ++ " " | i in CLASSES] ++ ["\n"];
-output [show(length(STAFF_REQ_DUTIES)) ++ " STAFF_REQ_DUTIES: \n"] ++ [show(STAFF_REQ_DUTIES)] ++ ["\n"];
-output [show(length(WARD_REQ_DUTIES)) ++ " WARD_REQ_DUTIES: \n"] ++ [show(WARD_REQ_DUTIES)] ++ ["\n"];
+%output [show(length(STAFF_REQ_DUTIES)) ++ " STAFF_REQ_DUTIES: \n"] ++ [show(STAFF_REQ_DUTIES)] ++ ["\n"];
+%output [show(length(WARD_REQ_DUTIES)) ++ " WARD_REQ_DUTIES: \n"] ++ [show(WARD_REQ_DUTIES)] ++ ["\n"];
 
 % Result printing
 output["\t" ++ join(" ",[if i in {C(1),X(1)} then "1" else " " endif | i in DAYS]) ++ "\t\t\t\t\t\t\t" ++ 
@@ -321,7 +318,6 @@ output["\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) 
        "\t\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) ++ "\n"];
 output[show(i) ++ "\t" ++ join(" ",[format_duty(i,j) | j in DAYS]) ++ "\t" ++ join("\t",[show(fix(staff_duty_counts[i,j])) | j in DUTIES]) ++ "\t" ++
         show(i) ++ "\t" ++ join(" ",[format_class(i,j) | j in DAYS]) ++ "\n" | i in STAFFS];
-output[/*"# of non-home class assignments = " ++ show(fix(score1)) ++*/ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3)) ++ "\n"];
+output["# of non-home class assignments = " ++ show(fix(score1)) ++ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3)) ++ "\n"];
 output["# of re-duty non-fulfillments= " ++ show(fix(score4)) ++ "\n"];
 output["Total # of max shift diffs= " ++ show(fix(score5)) ++ "\tTotal # of A/P diffs= " ++ show(fix(score6)) ++"\n"];
-output["Total # of max ward manpower diffs= " ++ show(fix(score7)) ++"\n"];
