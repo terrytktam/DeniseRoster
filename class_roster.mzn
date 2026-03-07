@@ -247,21 +247,21 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 );
 
 % Objective functions
-var int: score1 = sum([not home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
-%var int: score2 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
-%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == O /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
-%                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(j))) in DAYS]);
-%var int: score3 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
-%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == N /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
-%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(j))))]) == O 
-%                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(enum_next(j)))))]) == N
-%                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(enum_next(enum_next(j))))) in DAYS]);
+%var int: score1 = sum([not home_class_assigned(i,roster[i,j]) | i in STAFFS, j in DAYS]);
+var int: score2 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
+                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == O /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
+                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(j))) in DAYS]);
+var int: score3 = sum([assignment_to_duty(roster[i,j]) == O /\ assignment_to_duty(roster[i,enum_next(j)]) == N 
+                      /\ assignment_to_duty(roster[i,enum_next(enum_next(j))]) == N /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(j)))]) == N
+                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(j))))]) == O 
+                      /\ assignment_to_duty(roster[i,enum_next(enum_next(enum_next(enum_next(enum_next(j)))))]) == N
+                      | i in CLASS_STAFFS[NIGHT], j in DAYS where enum_next(enum_next(enum_next(enum_next(enum_next(j))))) in DAYS]);
 var int: score4 = length(STAFF_REQ_DUTIES) - sum([assignment_to_duty(roster[i,j]) == k | i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES]);
 var int: score5 = sum([max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]) | i in SHIFTS]);
 var int: score6 = sum([diff_ap(staff_duty_counts[i,A],staff_duty_counts[i,P]) | i in STAFFS]);
 var int: score7 = sum([max_diff_manpower(col(ward_shift_manpower,i)) | i in ASSIGNMENTS]);
 
-solve :: int_search(roster, first_fail, indomain_min) minimize score1 /*+ score2 + score3*/ + score4 + score5 + score6 + score7;
+solve :: int_search(roster, first_fail, indomain_min) minimize /*score1 +*/ score2 + score3 + score4 + score5 + score6 + score7;
 
 % Helper functions
 function var DUTIES: assignment_to_duty(var ASSIGNMENTS0: index) = allAssignments[index].duty;
@@ -322,7 +322,7 @@ output["\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) 
        "\t\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) ++ "\n"];
 output[show(i) ++ "\t" ++ join(" ",[format_duty(i,j) | j in DAYS]) ++ "\t" ++ join("\t",[show(fix(staff_duty_counts[i,j])) | j in DUTIES]) ++ "\t" ++
         show(i) ++ "\t" ++ join(" ",[format_class(i,j) | j in DAYS]) ++ "\n" | i in STAFFS];
-output["# of non-home class assignments = " ++ show(fix(score1)) /*++ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3))*/ ++ "\n"];
+output[/*"# of non-home class assignments = " ++ show(fix(score1)) ++*/ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3)) ++ "\n"];
 output["# of re-duty non-fulfillments= " ++ show(fix(score4)) ++ "\n"];
 output["Total # of max shift diffs= " ++ show(fix(score5)) ++ "\tTotal # of A/P diffs= " ++ show(fix(score6)) ++"\n"];
 output["Total # of max ward manpower diffs= " ++ show(fix(score7)) ++"\n"];
