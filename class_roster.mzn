@@ -103,7 +103,7 @@ array[int] of ReqDuties: WARD_REQ_DUTIES = req_duties(ward_req_duties);
 % Decision Variables
 array[STAFFS, DAYS] of var ASSIGNMENTS0: roster;
 array[DAYS, ASSIGNMENTS0] of var set of STAFFS: ward;
-array[DAYS] of var STAFFS: a1;
+array[DAYS] of var opt STAFFS: a1;
 array[DAYS] of var opt STAFFS: call;
 array[STAFFS, DUTIES] of var int: staff_duty_counts;
 array[DAYS, ASSIGNMENTS] of var int: ward_shift_manpower;
@@ -160,8 +160,8 @@ predicate rules3 = (forall(i in STAFFS) (
 ));
 
 % Rule 4: constraint of daily A1 duty constraint
-predicate rules4 = (forall(i in DAYS) (
-    assignment_to_duty(roster[a1[i],i]) == A
+predicate rules4 = (forall(i in DAYS where i in C(1..nRosterDays)) (
+    occurs(a1[i]) /\ assignment_to_duty(roster[deopt(a1[i]),i]) == A
 ));
 
 % Rule 5: constraint of min # of staffs of all types in every N/A/P duties
@@ -268,7 +268,10 @@ function string: format_duty(STAFFS: staff, DAYS: day) =
         array[DUTIES] of bool: temp = [(staff,day,i) in STAFF_REQ_DUTIES | i in DUTIES],
         DUTIES: duty = fix(assignment_to_duty(roster[staff,day]))
     } in
-    if xorall(temp) /\ not ((staff,day,duty) in STAFF_REQ_DUTIES) then lowercase[duty] elseif fix(call[day]) == staff then "C" else format(duty) endif;
+    if xorall(temp) /\ not ((staff,day,duty) in STAFF_REQ_DUTIES) then lowercase[duty]
+    elseif fix(call[day]) == staff then "C"
+    elseif fix(a1[day]) == staff then "&" 
+    else format(duty) endif;
     /*if temp[duty] then format(duty) elseif xorall(temp) then lowercase[duty] else " " endif;*/
 
 function string: format_class(STAFFS: staff, DAYS: day) = 
