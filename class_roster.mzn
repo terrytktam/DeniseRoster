@@ -7,7 +7,7 @@ enum TYPES0 = {LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT, OFFICE, HOME};
 enum RULES = {WardReqDuty,            % ward request duty constraint
               ContractDayOff,         % contract O + public holiday O entitlement constraint
               WeekendOff,             % # of weekend O constraint
-              NoWeekendPP,            % no weekend PP constraint (mandatory)
+              DailyA1Duty,            % daily A1 duty constraint (mandatory)
               MinWardStaffReq,        % daily ward requirement constraint (mandatory)
               NormalDutyStateDiagram, % normal AN constraint
               NormalNightFrequency,   % at most 1 N for CN days constraint (mandatory)
@@ -103,6 +103,7 @@ array[int] of ReqDuties: WARD_REQ_DUTIES = req_duties(ward_req_duties);
 % Decision Variables
 array[STAFFS, DAYS] of var ASSIGNMENTS0: roster;
 array[DAYS, ASSIGNMENTS0] of var set of STAFFS: ward;
+array[DAYS] of var STAFFS: a1;
 array[DAYS] of var opt STAFFS: call;
 array[STAFFS, DUTIES] of var int: staff_duty_counts;
 array[DAYS, ASSIGNMENTS] of var int: ward_shift_manpower;
@@ -127,7 +128,7 @@ constraint forall(i in DAYS, j in ASSIGNMENTS) (
 constraint active_constraints[WardReqDuty] -> rules1();
 constraint active_constraints[ContractDayOff] -> rules2();
 constraint active_constraints[WeekendOff] -> rules3();
-%constraint active_constraints[NoWeekendPP] -> rules4();
+constraint active_constraints[DailyA1Duty] -> rules4();
 constraint active_constraints[MinWardStaffReq] -> rules5();
 constraint active_constraints[NormalDutyStateDiagram] -> rules6();
 constraint active_constraints[NormalNightFrequency] -> rules7();
@@ -158,11 +159,9 @@ predicate rules3 = (forall(i in STAFFS) (
     global_cardinality([assignment_to_duty(roster[i,j]) | j in C(1..nRosterDays)], OFF, [min_weekend_O], [nWeekends])
 ));
 
-% Rule 4: constraint of no both-P for the same weekend
-predicate rules4 = (forall(i in STAFFS) (
-    forall(j in weekends where enum_next(j) in weekends) (
-        roster[i,j] == P -> roster[i,enum_next(j)] != P
-    )
+% Rule 4: constraint of daily A1 duty constraint
+predicate rules4 = (forall(i in DAYS) (
+    assignment_to_duty(roster[a1[i],i]) == A
 ));
 
 % Rule 5: constraint of min # of staffs of all types in every N/A/P duties
@@ -201,10 +200,7 @@ predicate rules7 = (forall(i in CLASS_STAFFS[NIGHT]) (
 
 % Rule 8: constraint of call night then O
 predicate rules8 = (forall(i in DAYS where i in call_req_duties /\ enum_next(i) in DAYS) (
-    let {
-        array[STAFFS] of var ASSIGNMENTS0: today = col(roster,i),
-        array[STAFFS] of var ASSIGNMENTS0: tomorrow = col(roster,enum_next(i))
-    } in occurs(call[i]) /\ assignment_to_duty(today[deopt(call[i])]) == P /\ assignment_to_duty(tomorrow[deopt(call[i])]) == O
+    occurs(call[i]) /\ assignment_to_duty(roster[deopt(call[i]),i]) == P /\ assignment_to_duty(roster[deopt(call[i]),enum_next(i)]) == O
 ));
 
 % Rule 9: constraint of at least 1 O for every nurse in every consecutive MW days
