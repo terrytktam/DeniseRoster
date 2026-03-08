@@ -19,6 +19,7 @@ enum RULES = {WardReqDuty,            % ward request duty constraint
               WardDayDuty             % ward requested D duty constraint
               };
 enum MINS = { shift, ladybug, butterfly, dragonfly, bee, night };
+enum UNFAVORS = { early, pc, day2night, night1n1o, night3n1o };
 array[DUTIES] of string: lowercase = ["n", "a", "p", "o", "d"];
 array[CLASSES] of string: shortform = ["L", "F", "D", "B", "N"];
 
@@ -106,7 +107,7 @@ array[DAYS, ASSIGNMENTS0] of var set of STAFFS: ward;
 array[DAYS] of var opt STAFFS: a1;
 array[DAYS] of var opt STAFFS: call;
 array[STAFFS, DUTIES] of var int: staff_duty_counts;
-array[DAYS, ASSIGNMENTS] of var int: ward_shift_manpower;
+array[STAFFS, UNFAVORS] of var int: staff_unfavor_counts;
 
 % Channel constraints for roster/ward
 constraint forall(i in DAYS) (
@@ -120,8 +121,18 @@ constraint forall(i in STAFFS) (
         array[DAYS] of var ASSIGNMENTS0: temp = row(roster,i)
     } in global_cardinality([assignment_to_duty(temp[j]) | j in DAYS], DUTIES, row(staff_duty_counts,i))
 );
-constraint forall(i in DAYS, j in ASSIGNMENTS) (
-    ward_shift_manpower[i,j] = card(ward[i,j])
+constraint global_cardinality(a1, STAFFS, col(staff_unfavor_counts,early));
+constraint global_cardinality(call, STAFFS, col(staff_unfavor_counts,pc));
+constraint forall(i in STAFFS) (
+    staff_unfavor_counts[i,day2night] = if i in CLASS_STAFFS[NIGHT] then 0 else staff_duty_counts[i,N] endif
+);
+constraint forall(i in STAFFS) (
+    staff_unfavor_counts[i,night1n1o] = if i in CLASS_STAFFS[NIGHT] 
+    then count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, O, N]) else 0 endif
+);
+constraint forall(i in STAFFS) (
+    staff_unfavor_counts[i,night3n1o] = if i in CLASS_STAFFS[NIGHT]
+    then count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, N, N, O, N]) else 0 endif
 );
 
 % Rule feature toggle constraints
@@ -244,8 +255,8 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 
 % Objective functions
 var int: score1 = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));
-var int: score2 = sum(i in STAFFS) (count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, O, N]));
-var int: score3 = sum(i in STAFFS) (count_subseq([assignment_to_duty(roster[i,j]) | j in DAYS], [O, N, N, N, O, N]));
+var int: score2 = sum(i in STAFFS) (staff_unfavor_counts[i,night1n1o]);
+var int: score3 = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]);
 var int: score4 = length(STAFF_REQ_DUTIES) - sum(i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i,j]) == k);
 var int: score5 = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
 var int: score6 = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
@@ -320,3 +331,4 @@ output[show(i) ++ "\t" ++ join(" ",[format_duty(i,j) | j in DAYS]) ++ "\t" ++ jo
 output["# of non-home class assignments = " ++ show(fix(score1)) ++ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3)) ++ "\n"];
 output["# of re-duty non-fulfillments= " ++ show(fix(score4)) ++ "\n"];
 output["Total # of max shift diffs= " ++ show(fix(score5)) ++ "\tTotal # of A/P diffs= " ++ show(fix(score6)) ++"\n"];
+output[show2d(fix(staff_unfavor_counts))];
