@@ -1,0 +1,3 @@
+nRosterDays = 28;
+MONTH_START = Mon;
+public_holidays = {};

@@ -1,3 +1,4 @@
+
 include "globals.mzn";
 
 % Constants
@@ -37,6 +38,7 @@ array[int, int] of int: min_ward;
 array[int, int] of int: max_ward;
 array[int, int] of int: staff_req_duties;
 array[int, int] of int: ward_req_duties;
+array[int, int] of int: annual_leaves;
 set of DAYS: call_req_duties;
 array[RULES] of bool: active_constraints;
 set of DAYS: public_holidays;
@@ -226,9 +228,9 @@ predicate rules9 = (forall(i in STAFFS where not (i in CLASS_STAFFS[NIGHT])) (
 ));
 
 % Rule 10: constraint of staff entitled annual leaves
-%predicate rules10 = forall(i in STAFFS, j in DAYS) (
-%    is_annual_leave[i,j] -> roster[i,j] == O
-%);
+predicate rules10 = forall(i in STAFFS, j in DAYS) (
+    is_annual_leave[i,j] -> roster[i,j] == O
+);
 
 % Rule 11: constraint of requested long night duties   
 %array[STAFFS, DAYS] of opt DUTIES: long_night_duties = 
