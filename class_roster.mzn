@@ -82,6 +82,11 @@ array[int] of int: MAX_WARD = convert(max_ward);
 % Derived Parameters (for requested duties)
 array[int] of ReqDuties: STAFF_REQ_DUTIES = req_duties(staff_req_duties);
 array[int] of ReqDuties: WARD_REQ_DUTIES = req_duties(ward_req_duties);
+array[STAFFS, DAYS] of bool: is_annual_leave = array2d(STAFFS, DAYS, [exists(row in 1..length(col(annual_leaves,1))) (
+                                                                      i == annual_leaves[row,1] /\ 
+                                                                      j >= annual_leaves[row,2] /\ 
+                                                                      j < annual_leaves[row,2] + annual_leaves[row,3]
+                                                                      ) | i in STAFFS, j in DAYS]);
 
 % Function to get mask value for specific staff/day (P/O/<> pattern)
 %function opt DUTIES: get_special_mask(STAFFS: s, DAYS: d) =

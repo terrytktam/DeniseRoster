@@ -145,7 +145,7 @@ ward_req_duties = [|
  NGT(1), V(4), N |
  NGT(1), V(5), O |
  NGT(1), V(6), O |
- NGT(1), V(7), A |
+ NGT(1), V(7), O |
  NGT(2), V(1), O |
  NGT(2), V(2), O |
  NGT(2), V(3), O |
