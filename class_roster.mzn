@@ -38,7 +38,7 @@ array[int, int] of int: min_ward;
 array[int, int] of int: max_ward;
 array[int, int] of int: staff_req_duties;
 array[int, int] of int: ward_req_duties;
-array[int, int] of int: annual_leaves;
+array[int, int] of int: annual_leaves = [];
 set of DAYS: call_req_duties;
 array[RULES] of bool: active_constraints;
 set of DAYS: public_holidays;
@@ -158,8 +158,8 @@ constraint active_constraints[PublicHolidayOff] -> rules12();
 constraint active_constraints[WardDayDuty] -> rules13();
 
 % Rule 1: constraint of matching roster with WARD_REQ_DUTIES
-predicate rules1 = forall(i in STAFFS, j in DAYS, k in DUTIES where has_element((i,j,k), WARD_REQ_DUTIES)) (
-    assignment_to_duty(roster[i,j]) == k
+predicate rules1 = forall(i in WARD_REQ_DUTIES) (
+    assignment_to_duty(roster[i.1,i.2]) == i.3
 );
 
 % Rule 2: constraint of # of Os (contract + public holidays) for every nurse in a month
@@ -264,7 +264,7 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 var int: score1 = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));
 var int: score2 = sum(i in STAFFS) (staff_unfavor_counts[i,night1n1o]);
 var int: score3 = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]);
-var int: score4 = length(STAFF_REQ_DUTIES) - sum(i in STAFFS, j in DAYS, k in DUTIES where (i,j,k) in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i,j]) == k);
+var int: score4 = sum(i in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i.1,i.2]) != i.3);
 var int: score5 = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
 var int: score6 = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
 
@@ -300,7 +300,7 @@ function string: format_class(STAFFS: staff, DAYS: day) =
 function array[int] of int: convert(array[int, int] of int: input) = 
     let {
         array[SHIFTS, MINS] of int: temp = array2d(SHIFTS, MINS, input)
-    } in [temp[i,k] | i in SHIFTS where i != N, j in CLASSES where j != NIGHT, k in MINS where (j,k) in CLASS_MINS] ++ [temp[N,night]];
+    } in [temp[i,j.2] | i in SHIFTS where i != N, j in CLASS_MINS where j.1 != NIGHT] ++ [temp[N,night]];
 
 function array[int] of ReqDuties: req_duties(array[int, int] of int: input) = 
     [(to_enum(STAFFS, input[i,1]), 
