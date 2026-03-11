@@ -141,9 +141,9 @@ def csv_to_minizinc_2d_array(csv_file_path, output_file_path=None, clean_values=
     # Create the Minizinc 2D array definition in [| ... |] format
     if rows:
         # Join with " |\n" between rows, and add final " |]"
-        result = "ward_requested_duties = [|\n" + " |\n".join(rows) + " |];"
+        result = "####_req_duties = [|\n" + " |\n".join(rows) + " |];"
     else:
-        result = "ward_requested_duties = [| |];"
+        result = "####_req_duties = [];"
         print("Warning: No non-empty entries found")
     
     # Write to file if output path provided
