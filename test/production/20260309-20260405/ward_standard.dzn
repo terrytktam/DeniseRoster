@@ -1,0 +1,29 @@
+nLADYBUG = 4;
+nBUTTERFLY = 4;
+nDRAGONFLY = 4;
+nBEE = 4;
+nNIGHT = 4;
+MW = 6;
+nCO = 6;
+min_ward = [| N, 0, 0, 0, 0, 3      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
+            | A, 1, 1, 1, 1, 0      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 1, 1, 1, 1, 0|];   % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
+max_ward = [| N, 0, 0, 0, 0, 3      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
+            | A, 2, 2, 2, 2, 0      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 2, 2, 2, 2, 0|];   % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
+
+active_constraints = [
+  true, % ward request duty constraint
+  false, % contract O + public holiday O entitlement constraint
+  false, % # of weekend O constraint
+  true, % daily A1 duty constraint
+  true, % daily ward requirement constraint (mandatory)
+  true, % normal AN constraint
+  true, % at least 2 Os for 4Ns constraint (mandatory)
+  true, % call night then O constraint (mandatory)
+  true, % at least 1 O for NW days constraint (mandatory)
+  true, % requested annual leaves (mandatory)
+  false, % requested long night duties (mandatory) [false]
+  true, % # of public holiday O constraint
+  false, % ward requested D duty constraint
+];
