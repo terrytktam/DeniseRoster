@@ -186,8 +186,9 @@ predicate rules3 = (forall(i in STAFFS) (
 ));
 
 % Rule 4: constraint of daily A1 duty constraint
-predicate rules4 = (forall(i in DAYS where i in C(1..nRosterDays)) (
-    occurs(a1[i]) /\ assignment_to_duty(roster[deopt(a1[i]),i]) == A
+predicate rules4 = (forall(i in DAYS) (
+    (i in C(1..nRosterDays) -> (occurs(a1[i]) /\ assignment_to_duty(roster[deopt(a1[i]),i]) == A)) \/
+    (not (i in C(1..nRosterDays) -> absent(a1[i])))
 ));
 
 % Rule 5: constraint of min # of staffs of all types in every N/A/P duties
@@ -347,8 +348,10 @@ output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
 output ["Whole calendar: "] ++ [show(DAY_WEEKDAYS)] ++ ["\n"];
 output ["Available weekends: "] ++ [show(weekends)] ++ ["\n"];
 output ["Available teachers: "] ++ [show(card(CLASS_STAFFS[i])) ++ " " | i in CLASSES] ++ ["\n"];
-%output [show(length(STAFF_REQ_DUTIES)) ++ " STAFF_REQ_DUTIES: \n"] ++ [show(STAFF_REQ_DUTIES)] ++ ["\n"];
-%output [show(length(WARD_REQ_DUTIES)) ++ " WARD_REQ_DUTIES: \n"] ++ [show(WARD_REQ_DUTIES)] ++ ["\n"];
+output ["allAssignments: \n"] ++ [show(allAssignments)] ++ ["\n"];
+output ["allAssignments in ASSIGNMENTS: \n"] ++ [show([allAssignments[i] | i in ASSIGNMENTS])] ++ ["\n"];
+output ["MIN_WARD: "] ++ [show(MIN_WARD)] ++ ["\n"];
+output ["MAX_WARD: "] ++ [show(MAX_WARD)] ++ ["\n"];
 
 % Result printing
 output["\t" ++ join(" ",[if i in {C(1),X(1)} then "1" else " " endif | i in DAYS]) ++ "\t\t\t\t\t\t\t" ++ 
@@ -362,5 +365,5 @@ output["# of non-home class assignments = " ++ show(fix(scores[NonHomeClassAssig
         "\t# of ONNNONs= " ++ show(fix(scores[NightStaff3N1O])) ++ "\n"];
 output["# of re-duty non-fulfillments= " ++ show(fix(scores[StaffReqDutyNonFulfillment])) ++ "\n"];
 output["Total # of max shift diffs= " ++ show(fix(scores[DayStaffUnevenShiftAmong])) ++ 
-        "\tTotal # of A/P diffs= " ++ show(fix(DayStaffUnevenAPShiftSelf)) ++"\n"];
-output[show2d(fix(staff_unfavor_counts))];
+        "\tTotal # of A/P diffs= " ++ show(fix(scores[DayStaffUnevenAPShiftSelf])) ++"\n"];
+%output[show2d(fix(staff_unfavor_counts))];
