@@ -19,6 +19,13 @@ enum RULES = {WardReqDuty,            % ward request duty constraint
               PublicHolidayOff,       % # of public holiday O constraint
               WardDayDuty             % ward requested D duty constraint
               };
+enum HEURISTICS = { NonHomeClassAssignment,      % non-home class assignment
+                    NightStaff1N1O,              % 1N1O for night-teachers
+                    NightStaff3N1O,              % 3N1O for night-teachers
+                    StaffReqDutyNonFulfillment,  % staff-requested duty non-fulfillment
+                    DayStaffUnevenShiftAmong,    % uneven shift assignment among day-teachers
+                    DayStaffUnevenAPShiftSelf    % uneven A/P shift for day-teachers
+                    };
 enum MINS = { shift, ladybug, butterfly, dragonfly, bee, night };
 enum UNFAVORS = { early, pc, day2night, night1n1o, night3n1o };
 array[DUTIES] of string: lowercase = ["n", "a", "p", "o", "d"];
@@ -41,6 +48,7 @@ array[int, int] of int: ward_req_duties;
 array[int, int] of int: annual_leaves = [];
 set of DAYS: call_req_duties;
 array[RULES] of bool: active_constraints;
+array[HEURISTICS] of int: heuristics_weights;
 set of DAYS: public_holidays;
 
 % Tuples/Records
@@ -260,15 +268,29 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
     assignment_to_duty(roster[i,j]) == D -> has_element((i,j,D), WARD_REQ_DUTIES)
 );
 
-% Objective functions
-var int: score1 = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));
-var int: score2 = sum(i in STAFFS) (staff_unfavor_counts[i,night1n1o]);
-var int: score3 = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]);
-var int: score4 = sum(i in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i.1,i.2]) != i.3);
-var int: score5 = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
-var int: score6 = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
+% heuristics score array
+array[HEURISTICS] of var int: scores = [score1(), score2(), score3(), score4(), score5(), score6()];
 
-solve :: int_search(roster, first_fail, indomain_min) minimize score1 + score2 + score3 + score4 + score5 + score6;
+% Score 1: non-home class assignment
+function var int: score1() = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));  
+
+% Score 2: 1N1O for night-teachers
+function var int: score2() = sum(i in STAFFS) (staff_unfavor_counts[i,night1n1o]);
+
+% Score 3: 3N1O for night-teachers
+function var int: score3() = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]);
+
+% Score 4: staff requested duty non-fulfillment
+function var int: score4() = sum(i in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i.1,i.2]) != i.3);
+
+% Score 5: uneven shift assignment among day-teachers
+function var int: score5() = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
+
+% Score 6: uneven A/P shifts for day-teachers
+function var int: score6() = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
+
+% Objective function
+solve :: int_search(roster, first_fail, indomain_min) minimize sum(i in HEURISTICS) (heuristics_weights[i] * scores[i]);
 
 % Helper functions
 function var DUTIES: assignment_to_duty(var ASSIGNMENTS0: index) = allAssignments[index].duty;
@@ -335,7 +357,10 @@ output["\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) 
        "\t\t" ++ join(" ",[if i in weekends then "S" else " " endif | i in DAYS]) ++ "\n"];
 output[show(i) ++ "\t" ++ join(" ",[format_duty(i,j) | j in DAYS]) ++ "\t" ++ join("\t",[show(fix(staff_duty_counts[i,j])) | j in DUTIES]) ++ "\t" ++
         show(i) ++ "\t" ++ join(" ",[format_class(i,j) | j in DAYS]) ++ "\n" | i in STAFFS];
-output["# of non-home class assignments = " ++ show(fix(score1)) ++ "\t# of ONONs= " ++ show(fix(score2)) ++ "\t# of ONNNONs= " ++ show(fix(score3)) ++ "\n"];
-output["# of re-duty non-fulfillments= " ++ show(fix(score4)) ++ "\n"];
-output["Total # of max shift diffs= " ++ show(fix(score5)) ++ "\tTotal # of A/P diffs= " ++ show(fix(score6)) ++"\n"];
+output["# of non-home class assignments = " ++ show(fix(scores[NonHomeClassAssignment])) ++ 
+        "\t# of ONONs= " ++ show(fix(scores[NightStaff1N1O])) ++ 
+        "\t# of ONNNONs= " ++ show(fix(scores[NightStaff3N1O])) ++ "\n"];
+output["# of re-duty non-fulfillments= " ++ show(fix(scores[StaffReqDutyNonFulfillment])) ++ "\n"];
+output["Total # of max shift diffs= " ++ show(fix(scores[DayStaffUnevenShiftAmong])) ++ 
+        "\tTotal # of A/P diffs= " ++ show(fix(DayStaffUnevenAPShiftSelf)) ++"\n"];
 output[show2d(fix(staff_unfavor_counts))];

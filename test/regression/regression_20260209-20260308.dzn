@@ -27,6 +27,14 @@ active_constraints = [
   true, % # of public holiday O constraint
   false, % ward requested D duty constraint
 ];
+heuristics_weights = [
+  1, % non-home class assignment
+  1, % 1N1O for night-teachers
+  1, % 3N1O for night-teachers
+  1, % staff-requested duty non-fulfillment
+  1, % uneven shift assignment among day-teachers
+  1, % uneven A/P shift for day-teachers
+];
 nRosterDays = 28;
 MONTH_START = Mon;
 public_holidays = {C(9), C(10), C(11)};
