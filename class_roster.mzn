@@ -23,8 +23,8 @@ enum HEURISTICS = { NonHomeClassAssignment,      % non-home class assignment
                     NightStaff1N1O,              % 1N1O for night-teachers
                     NightStaff3N1O,              % 3N1O for night-teachers
                     StaffReqDutyNonFulfillment,  % staff-requested duty non-fulfillment
-                    DayStaffUnevenShiftAmong,    % uneven shift assignment among day-teachers
-                    DayStaffUnevenAPShiftSelf    % uneven A/P shift for day-teachers
+                    UnevenDayUnfavor,            % uneven unfavorable duty for day-teachers
+                    UnevenNightUnfavor           % uneven unfavorable duty for night-teachers
                     };
 enum MINS = { shift, ladybug, butterfly, dragonfly, bee, night };
 enum UNFAVORS = { early, pc, day2night, night1n1o, night3n1o };
@@ -187,8 +187,8 @@ predicate rules3 = (forall(i in STAFFS) (
 
 % Rule 4: constraint of daily A1 duty constraint
 predicate rules4 = (forall(i in DAYS) (
-    (i in C(1..nRosterDays) -> (occurs(a1[i]) /\ assignment_to_duty(roster[deopt(a1[i]),i]) == A)) \/
-    (not (i in C(1..nRosterDays) -> absent(a1[i])))
+    (i in C(1..nRosterDays) -> (occurs(a1[i]) /\ assignment_to_duty(roster[deopt(a1[i]),i]) == A)) /\
+    (not (i in C(1..nRosterDays)) -> absent(a1[i]))
 ));
 
 % Rule 5: constraint of min # of staffs of all types in every N/A/P duties
@@ -226,8 +226,12 @@ predicate rules7 = (forall(i in CLASS_STAFFS[NIGHT]) (
 ));
 
 % Rule 8: constraint of call night then O
-predicate rules8 = (forall(i in DAYS where i in call_req_duties /\ enum_next(i) in DAYS) (
-    occurs(call[i]) /\ assignment_to_duty(roster[deopt(call[i]),i]) == P /\ assignment_to_duty(roster[deopt(call[i]),enum_next(i)]) == O
+predicate rules8 = (forall(i in DAYS) (
+     (not (i in call_req_duties) -> absent(call[i])) /\
+     ((i in call_req_duties /\ enum_next(i) in DAYS) -> (occurs(call[i]) /\ 
+      let { 
+          var STAFFS: staff = deopt(call[i])
+      } in assignment_to_duty(roster[staff,i]) == P /\ assignment_to_duty(roster[staff,enum_next(i)]) == O))
 ));
 
 % Rule 9: constraint of at least 1 O for every nurse in every consecutive MW days
@@ -272,7 +276,7 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 % heuristics score array
 array[HEURISTICS] of var int: scores = [score1(), score2(), score3(), score4(), score5(), score6()];
 
-% Score 1: non-home class assignment
+% Score 1: non-home class assignment (including N for day-teachers)
 function var int: score1() = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));  
 
 % Score 2: 1N1O for night-teachers
@@ -284,11 +288,11 @@ function var int: score3() = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]
 % Score 4: staff requested duty non-fulfillment
 function var int: score4() = sum(i in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i.1,i.2]) != i.3);
 
-% Score 5: uneven shift assignment among day-teachers
-function var int: score5() = sum(i in SHIFTS) (max_diff_shifts([col(staff_duty_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
+% Score 5: uneven unfavorable duties among day teachers
+function var int: score5() = sum(i in {early, pc, day2night}) (max_diff([col(staff_unfavor_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
 
-% Score 6: uneven A/P shifts for day-teachers
-function var int: score6() = sum(i in STAFFS) (diff_ap(staff_duty_counts[i,A], staff_duty_counts[i,P]));
+% Score 6: uneven unfavorable duties among night teachers
+function var int: score6() =  sum(i in {night1n1o, night3n1o}) (max_diff([col(staff_unfavor_counts,i)[j] | j in CLASS_STAFFS[NIGHT]]));
 
 % Objective function
 solve :: int_search(roster, first_fail, indomain_min) minimize sum(i in HEURISTICS) (heuristics_weights[i] * scores[i]);
@@ -330,7 +334,7 @@ function array[int] of ReqDuties: req_duties(array[int, int] of int: input) =
       to_enum(DAYS, input[i,2]), 
       to_enum(DUTIES, input[i,3])) | i in 1..length(col(input,1))];
 
-function var int: max_diff_shifts(array[int] of var int: input) = max(input) - min(input);
+function var int: max_diff(array[int] of var int: input) = max(input) - min(input);
 
 function var int: diff_ap(var int: a, var int: p) = 
     let {
@@ -364,6 +368,6 @@ output["# of non-home class assignments = " ++ show(fix(scores[NonHomeClassAssig
         "\t# of ONONs= " ++ show(fix(scores[NightStaff1N1O])) ++ 
         "\t# of ONNNONs= " ++ show(fix(scores[NightStaff3N1O])) ++ "\n"];
 output["# of re-duty non-fulfillments= " ++ show(fix(scores[StaffReqDutyNonFulfillment])) ++ "\n"];
-output["Total # of max shift diffs= " ++ show(fix(scores[DayStaffUnevenShiftAmong])) ++ 
-        "\tTotal # of A/P diffs= " ++ show(fix(scores[DayStaffUnevenAPShiftSelf])) ++"\n"];
+output["Total # of max day unfavor diffs= " ++ show(fix(scores[UnevenDayUnfavor])) ++ 
+        "\tTotal # of max night unfavor diffs= " ++ show(fix(scores[UnevenNightUnfavor])) ++"\n"];
 %output[show2d(fix(staff_unfavor_counts))];
