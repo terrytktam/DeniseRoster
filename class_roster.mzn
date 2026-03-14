@@ -192,7 +192,7 @@ predicate rules4 = (forall(i in DAYS) (
 ));
 
 % Rule 5: constraint of min # of staffs of all types in every N/A/P duties
-predicate rules5 = (forall(i in DAYS) (
+predicate rules5 = (forall(i in C(1..nRosterDays)) (
     global_cardinality(col(roster,i), ASSIGNMENTS, MIN_WARD, MAX_WARD)
 ));
 
