@@ -4,7 +4,7 @@ include "globals.mzn";
 % Constants
 enum WEEKDAYS = {Mon, Tue, Wed, Thu, Fri, Sat, Sun};
 enum DUTIES = {N, A, P, O, D};
-enum TYPES0 = {LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT, OFFICE, HOME};
+enum TYPES0 = {LYG, BFY, DNY, BEE, NIGHT, OFFICE, HOME};
 enum RULES = {WardReqDuty,            % ward request duty constraint
               ContractDayOff,         % contract O + public holiday O entitlement constraint
               WeekendOff,             % # of weekend O constraint
@@ -63,9 +63,9 @@ int: nWeekends = card(weekends);
 int: nDuties = card(DUTIES);
 int: nClasses = card(CLASSES);
 int: nPHs = card(public_holidays);
-set of TYPES0: CLASSES = {LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT};
+set of TYPES0: CLASSES = {LYG, BFY, DNY, BEE, NIGHT};
 array[CLASSES] of int: nClassStaffs = [nLADYBUG, nBUTTERFLY, nDRAGONFLY, nBEE, nNIGHT];
-array[CLASSES] of ClassMins: CLASS_MINS = [(LADYBUG, ladybug), (BUTTERFLY, butterfly), (DRAGONFLY, dragonfly), (BEE, bee), (NIGHT, night)];
+array[CLASSES] of ClassMins: CLASS_MINS = [(LYG, ladybug), (BFY, butterfly), (DNY, dragonfly), (BEE, bee), (NIGHT, night)];
 set of WEEKDAYS: WEEKEND = {Sat, Sun};
 set of DUTIES: SHIFTS = {N, A, P};
 set of DUTIES: OFF = {O};
@@ -324,6 +324,15 @@ function string: format_class(STAFFS: staff, DAYS: day) =
         ASSIGNMENTS0: assignment = fix(roster[staff,day])
     } in if assignment in ASSIGNMENTS then shortform[fix(assignment_to_class(assignment))] else " " endif;
 
+function string: format_manpower(array[STAFFS] of ASSIGNMENTS0: assignments, CLASSES: class) = 
+    let {
+        array[STAFFS] of SHIFTS: temp = [if fix(assignments[i]) in ASSIGNMENTS then 
+                                            if fix(assignment_to_class(assignments[i])) == class 
+                                            then fix(assignment_to_duty(assignments[i]))
+                                            else N endif
+                                         else N endif | i in STAFFS]
+    } in join("", [format(count([temp[j] == i | j in STAFFS])) ++ format(i) | i in {A, P}]);
+
 function array[int] of int: convert(array[int, int] of int: input) = 
     let {
         array[SHIFTS, MINS] of int: temp = array2d(SHIFTS, MINS, input)
@@ -371,3 +380,5 @@ output["# of re-duty non-fulfillments= " ++ show(fix(scores[StaffReqDutyNonFulfi
 output["Total # of max day unfavor diffs= " ++ show(fix(scores[UnevenDayUnfavor])) ++ 
         "\tTotal # of max night unfavor diffs= " ++ show(fix(scores[UnevenNightUnfavor])) ++"\n"];
 %output[show2d(fix(staff_unfavor_counts))];
+output["\t" ++ join("\t",[show(i) | i in CLASSES where i != NIGHT]) ++ "\n"];
+output[show(i) ++ "\t" ++ join("\t",[format_manpower(fix(col(roster,i)),j) | j in CLASSES where j != NIGHT]) ++ "\n" | i in DAYS];
