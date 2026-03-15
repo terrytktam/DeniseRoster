@@ -1,26 +1,21 @@
 {
     "openFiles": [
         "class_roster.mzn",
-        "test/production/20260309-20260405/ward_standard.dzn",
         "test/production/20260309-20260405/calendar.dzn",
         "test/production/20260309-20260405/call_req_duties.dzn",
-        "test/production/20260309-20260405/staff_req_duties.dzn",
-        "test/production/20260309-20260405/ward_req_duties.dzn",
-        "test/regression/regression_20260309-20260405.dzn",
-        "test/regression/regression_20260209-20260308.dzn"
+        "test/production/20260309-20260405/ward_standard.dzn",
+        "test/production/20260309-20260405/ward_req_duties.dzn"
     ],
-    "openTab": 7,
+    "openTab": 0,
     "projectFiles": [
         "class_roster.mpc",
         "class_roster.mzn",
         "test/production/20260209-20260308/calendar.dzn",
         "test/production/20260209-20260308/call_req_duties.dzn",
-        "test/production/20260209-20260308/staff_req_duties.dzn",
         "test/production/20260209-20260308/ward_req_duties.dzn",
         "test/production/20260209-20260308/ward_standard.dzn",
         "test/production/20260309-20260405/calendar.dzn",
         "test/production/20260309-20260405/call_req_duties.dzn",
-        "test/production/20260309-20260405/staff_req_duties.dzn",
         "test/production/20260309-20260405/ward_req_duties.dzn",
         "test/production/20260309-20260405/ward_standard.dzn",
         "test/regression/regression_20260209-20260308.dzn",
