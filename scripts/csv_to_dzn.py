@@ -52,10 +52,8 @@ for row in reader[1:]:
 
 # Generate the DZN output
 if records:
-    print("% Type definition (add this to your Minizinc model):")
-    print("% type Request = ({STAFF: staff, DAY: day, DUTY: duty});")
     print()
-    print("####_REQ_DUTIES = [")
+    print("WARD_REQ_DUTIES = [")
     for i, r in enumerate(records):
         if i < len(records) - 1:
             print(f"  {r},")
@@ -63,4 +61,4 @@ if records:
             print(f"  {r}")
     print("];")
 else:
-    print("####_REQ_DUTIES = [];")
+    print("WARD_REQ_DUTIES = [];")
