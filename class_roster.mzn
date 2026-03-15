@@ -43,8 +43,8 @@ int: nCO;         % minimum number of Os in roster
 WEEKDAYS: MONTH_START;
 array[int, int] of int: min_ward;
 array[int, int] of int: max_ward;
-array[int, int] of int: staff_req_duties;
-array[int, int] of int: ward_req_duties;
+array[int] of ReqDuties: STAFF_REQ_DUTIES;
+array[int] of ReqDuties: WARD_REQ_DUTIES;
 array[int, int] of int: annual_leaves = [];
 set of DAYS: call_req_duties;
 array[RULES] of bool: active_constraints;
@@ -53,7 +53,7 @@ set of DAYS: public_holidays;
 
 % Tuples/Records
 type ClassMins = tuple(CLASSES, MINS);
-type ReqDuties = tuple(STAFFS, DAYS, DUTIES);
+type ReqDuties = record(STAFFS: staff, DAYS: day, DUTIES: duty);
 type Assignment = record(DUTIES: duty, TYPES0: place);
 
 % Derived Parameters
@@ -88,8 +88,6 @@ array[int] of int: MIN_WARD = convert(min_ward);
 array[int] of int: MAX_WARD = convert(max_ward);
 
 % Derived Parameters (for requested duties)
-array[int] of ReqDuties: STAFF_REQ_DUTIES = req_duties(staff_req_duties);
-array[int] of ReqDuties: WARD_REQ_DUTIES = req_duties(ward_req_duties);
 array[STAFFS, DAYS] of bool: is_annual_leave = array2d(STAFFS, DAYS, [exists(row in 1..length(col(annual_leaves,1))) (
                                                                       i == annual_leaves[row,1] /\ 
                                                                       j >= annual_leaves[row,2] /\ 
@@ -167,7 +165,7 @@ constraint active_constraints[WardDayDuty] -> rules13();
 
 % Rule 1: constraint of matching roster with WARD_REQ_DUTIES
 predicate rules1 = forall(i in WARD_REQ_DUTIES) (
-    assignment_to_duty(roster[i.1,i.2]) == i.3
+    assignment_to_duty(roster[i.staff,i.day]) == i.duty
 );
 
 % Rule 2: constraint of # of Os (contract + public holidays) for every nurse in a month
@@ -270,7 +268,7 @@ predicate rules12 = (forall(i in STAFFS) (
 
 % Rule 13: constraint of D duty must appear in WARD_REQ_DUTIES
 predicate rules13 = forall(i in STAFFS, j in DAYS) (
-    assignment_to_duty(roster[i,j]) == D -> has_element((i,j,D), WARD_REQ_DUTIES)
+    assignment_to_duty(roster[i,j]) == D -> has_element((staff: i, day: j, duty: D), WARD_REQ_DUTIES)
 );
 
 % heuristics score array
@@ -286,7 +284,7 @@ function var int: score2() = sum(i in STAFFS) (staff_unfavor_counts[i,night1n1o]
 function var int: score3() = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]);
 
 % Score 4: staff requested duty non-fulfillment
-function var int: score4() = sum(i in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i.1,i.2]) != i.3);
+function var int: score4() = sum(i in STAFF_REQ_DUTIES) (assignment_to_duty(roster[i.staff,i.day]) != i.duty);
 
 % Score 5: uneven unfavorable duties among day teachers
 function var int: score5() = sum(i in {early, pc, day2night}) (max_diff([col(staff_unfavor_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])]));
@@ -310,10 +308,10 @@ function WEEKDAYS: weekday(DAYS: day) =
 
 function string: format_duty(STAFFS: staff, DAYS: day) = 
     let {
-        array[DUTIES] of bool: temp = [(staff,day,i) in STAFF_REQ_DUTIES | i in DUTIES],
+        array[DUTIES] of bool: temp = [(staff: staff, day: day, duty: i) in STAFF_REQ_DUTIES | i in DUTIES],
         DUTIES: duty = fix(assignment_to_duty(roster[staff,day]))
     } in
-    if xorall(temp) /\ not ((staff,day,duty) in STAFF_REQ_DUTIES) then lowercase[duty]
+    if xorall(temp) /\ not ((staff: staff, day: day, duty: duty) in STAFF_REQ_DUTIES) then lowercase[duty]
     elseif fix(call[day]) == staff then "C"
     elseif fix(a1[day]) == staff then "&" 
     else format(duty) endif;
@@ -337,11 +335,6 @@ function array[int] of int: convert(array[int, int] of int: input) =
     let {
         array[SHIFTS, MINS] of int: temp = array2d(SHIFTS, MINS, input)
     } in [temp[i,j.2] | i in SHIFTS where i != N, j in CLASS_MINS where j.1 != NIGHT] ++ [temp[N,night]];
-
-function array[int] of ReqDuties: req_duties(array[int, int] of int: input) = 
-    [(to_enum(STAFFS, input[i,1]), 
-      to_enum(DAYS, input[i,2]), 
-      to_enum(DUTIES, input[i,3])) | i in 1..length(col(input,1))];
 
 function var int: max_diff(array[int] of var int: input) = max(input) - min(input);
 
