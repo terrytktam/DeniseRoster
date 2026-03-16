@@ -36,4 +36,5 @@ heuristics_weights = [
   1, % 2A1P for class
   1, % uneven unfavorable duty for day-teachers
   1, % uneven unfavorable duty for night-teachers
+  1, % uneven favorable Os for all teachers
 ];

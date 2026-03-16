@@ -29,11 +29,14 @@ active_constraints = [
 ];
 heuristics_weights = [
   1, % non-home class assignment
+  1, % PA for day-teachers
+  1, % NOA for day-teachers
   1, % 1N1O for night-teachers
   1, % 3N1O for night-teachers
-  1, % staff-requested duty non-fulfillment
-  1, % uneven shift assignment among day-teachers
-  1, % uneven A/P shift for day-teachers
+  1, % 2A1P for class
+  1, % uneven unfavorable duty for day-teachers
+  1, % uneven unfavorable duty for night-teachers
+  1, % uneven favorable Os for all teachers
 ];
 nRosterDays = 28;
 MONTH_START = Mon;

@@ -26,7 +26,8 @@ enum HEURISTICS = { NonHomeClassAssignment,      % non-home class assignment
                     NightStaff3N1O,              % 3N1O for night-teachers
                     Class2A1P,                   % 2A1P for classes
                     UnevenDayUnfavor,            % uneven unfavorable duty for day-teachers
-                    UnevenNightUnfavor           % uneven unfavorable duty for night-teachers
+                    UnevenNightUnfavor,          % uneven unfavorable duty for night-teachers
+                    UnevenFavorOs                % uneven favorable Os for all teachers
                     };
 enum MINS = { shift, ladybug, butterfly, dragonfly, bee, night };
 enum UNFAVORS = { early, pc, day2night, pa, noa, night1n1o, night3n1o };
@@ -82,6 +83,7 @@ int: nNextMthDays = 2;
 enum DAYS = V(1..nPrevMthDays) ++ C(1..nRosterDays) ++ X(1..nNextMthDays);
 array[DAYS] of WEEKDAYS: DAY_WEEKDAYS = [weekday(i) | i in DAYS];
 set of DAYS: weekends = array2set([i | i in DAYS where DAY_WEEKDAYS[i] in WEEKEND]);
+set of DAYS: favor_Os = weekends union public_holidays;
 int: nDays = card(DAYS);
 
 % Derived Parameters
@@ -109,6 +111,7 @@ array[DAYS] of var opt STAFFS: a1;
 array[DAYS] of var opt STAFFS: call;
 array[STAFFS, DUTIES] of var int: staff_duty_counts;
 array[STAFFS, UNFAVORS] of var int: staff_unfavor_counts;
+array[STAFFS] of var int: staff_favor_O_counts;
 
 % Channel constraints for roster/ward
 constraint forall(i in DAYS) (
@@ -142,6 +145,9 @@ constraint forall(i in STAFFS) (
     forall(j in night_criteria) (
         staff_unfavor_counts[i,j.unfavor] = if i in CLASS_STAFFS[NIGHT] 
         then count_subseq([assignment_to_duty(roster[i,k]) | k in DAYS], j.pat) else 0 endif)
+);
+constraint forall(i in STAFFS) (
+    global_cardinality([assignment_to_duty(roster[i,j]) | j in favor_Os], OFF, [staff_favor_O_counts[i]])
 );
 
 % Rule feature toggle constraints
@@ -271,7 +277,7 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 );
 
 % heuristics score array
-array[HEURISTICS] of var int: scores = [score1(), score2(), score3(), score4(), score5(), score6(), score7(), score8()];
+array[HEURISTICS] of var int: scores = [score1(), score2(), score3(), score4(), score5(), score6(), score7(), score8(), score9()];
 
 % Score 1: non-home class assignment (including N for day-teachers)
 function var int: score1() = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));  
@@ -296,8 +302,11 @@ function var int: score7() = sum(i in DAY_UNFAVORS) (max_diff([col(staff_unfavor
                              max_diff([sum(j in DAY_UNFAVORS) (row(staff_unfavor_counts,i)[j]) | i in STAFFS where not (i in CLASS_STAFFS[NIGHT])]);
 
 % Score 8: uneven unfavorable duties among night teachers
-function var int: score8() =  sum(i in NIGHT_UNFAVORS) (max_diff([col(staff_unfavor_counts,i)[j] | j in CLASS_STAFFS[NIGHT]])) +
-                              max_diff([sum(j in NIGHT_UNFAVORS) (row(staff_unfavor_counts,i)[j]) | i in CLASS_STAFFS[NIGHT]]);
+function var int: score8() = sum(i in NIGHT_UNFAVORS) (max_diff([col(staff_unfavor_counts,i)[j] | j in CLASS_STAFFS[NIGHT]])) +
+                             max_diff([sum(j in NIGHT_UNFAVORS) (row(staff_unfavor_counts,i)[j]) | i in CLASS_STAFFS[NIGHT]]);
+
+% Score 9: uneven weekend+PH Os among all teachers
+function var int: score9() = max_diff(staff_favor_O_counts);
 
 % Objective function
 solve :: int_search(roster, first_fail, indomain_min) minimize sum(i in HEURISTICS) (heuristics_weights[i] * scores[i]);
@@ -370,7 +379,8 @@ output["# of non-home(s) = " ++ show(fix(scores[NonHomeClassAssignment])) ++
         "\t# of ONNNONs= " ++ show(fix(scores[NightStaff3N1O])) ++ "\n"];
 output["# of 2A1Ps= " ++ show(fix(scores[Class2A1P])) ++ "\n"];
 output["Total # of max day unfavor diffs= " ++ show(fix(scores[UnevenDayUnfavor])) ++ 
-        "\tTotal # of max night unfavor diffs= " ++ show(fix(scores[UnevenNightUnfavor])) ++"\n"];
+        "\tTotal # of max night unfavor diffs= " ++ show(fix(scores[UnevenNightUnfavor])) ++
+        "\tTotal # of max favor O diffs= " ++ show(fix(scores[UnevenFavorOs])) ++ "\n"];
 output["\t" ++ join("\t",[show(i) | i in CLASSES where i != NIGHT]) ++ "\n"];
 output[show(i) ++ "\t" ++ join("\t",[format_manpower(fix(col(roster,i)),j) | j in CLASSES where j != NIGHT]) ++ "\n" | i in DAYS];
 output[show2d(fix(staff_unfavor_counts))];
