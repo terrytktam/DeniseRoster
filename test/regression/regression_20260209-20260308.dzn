@@ -5,12 +5,12 @@ nBEE = 5;
 nNIGHT = 4;
 MW = 7;
 nCO = 6;
-min_ward = [| N, 0, 0, 0, 0, 3      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
-            | A, 1, 1, 1, 1, 0      % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
-            | P, 1, 1, 1, 1, 0|];   % min # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
-max_ward = [| N, 0, 0, 0, 0, 3      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
-            | A, 2, 2, 2, 2, 0      % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
-            | P, 2, 2, 2, 2, 0|];   % max # of BEETLE, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
+min_ward = [| N, 0, 0, 0, 0, 3      % min # of LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
+            | A, 1, 1, 1, 1, 0      % min # of LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 1, 1, 1, 1, 0|];   % min # of LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
+max_ward = [| N, 0, 0, 0, 0, 3      % max # of LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at N
+            | A, 2, 2, 2, 2, 0      % max # of LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at A
+            | P, 2, 2, 2, 2, 0|];   % max # of LADYBUG, BUTTERFLY, DRAGONFLY, BEE, NIGHT staffs at P
 
 active_constraints = [
   true, % ward request duty constraint
@@ -22,7 +22,7 @@ active_constraints = [
   true, % at least 2 Os for 4Ns constraint (mandatory)
   true, % call night then O constraint (mandatory)
   true, % at least 1 O for NW days constraint (mandatory)
-  false, % requested annual leaves (mandatory)
+  true, % ward requested consecutive 3/4Os for day/night-teachers (mandatory)
   false, % requested long night duties (mandatory) [false]
   false, % # of public holiday O constraint
   true, % ward requested D duty constraint

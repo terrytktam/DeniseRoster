@@ -14,7 +14,7 @@ enum RULES = {WardReqDuty,            % ward request duty constraint
               NormalNightFrequency,   % at most 1 N for CN days constraint (mandatory)
               CallNightDuty,          % call night then O constraint (mandatory)
               NormalOffFrequency,     % at least 1 O for NW days constraint (mandatory)
-              ReqAnnualLeaves,        % requested annual leaves (mandatory)
+              NonWardConsecutiveOs,   % ward requested consecutive 3/4Os for day/night-teachers (mandatory)
               LongNightDuties,        % requested long night duties (mandatory)
               PublicHolidayOff,       % # of public holiday O constraint
               WardDayDuty             % ward requested D duty constraint
@@ -46,7 +46,6 @@ WEEKDAYS: MONTH_START;
 array[int, int] of int: min_ward;
 array[int, int] of int: max_ward;
 array[int] of ReqDuties: WARD_REQ_DUTIES;
-array[int, int] of int: annual_leaves = [];
 set of DAYS: call_req_duties;
 array[RULES] of bool: active_constraints;
 array[HEURISTICS] of int: heuristics_weights;
@@ -90,32 +89,18 @@ array[CLASSES] of set of STAFFS: CLASS_STAFFS = [LYG(1..nLADYBUG), BFY(1..nBUTTE
 array[int] of int: MIN_WARD = convert(min_ward);
 array[int] of int: MAX_WARD = convert(max_ward);
 
-% Derived Parameters (for requested duties)
-array[STAFFS, DAYS] of bool: is_annual_leave = array2d(STAFFS, DAYS, [exists(row in 1..length(col(annual_leaves,1))) (
-                                                                      i == annual_leaves[row,1] /\ 
-                                                                      j >= annual_leaves[row,2] /\ 
-                                                                      j < annual_leaves[row,2] + annual_leaves[row,3]
-                                                                      ) | i in STAFFS, j in DAYS]);
-
-% Function to get mask value for specific staff/day (P/O/<> pattern)
-%function opt DUTIES: get_special_mask(STAFFS: s, DAYS: d) =
-%    let {
-%        int: row = long_night_row(s,d)
-%    } in
-%    if row > 0 then
-%        if d == long_nights[row,2] then 
-%            if occurs(long_night_duties[s, enum_prev(d)]) then O else P endif  % First day
-%        else O endif    % Next 13 days after start
-%    else <> endif;      % All other days
+% Function to get mask value for specific staff/day
+function opt DUTIES: get_special_mask(STAFFS: s, DAYS: d) =
+    if (staff: s, day: d, duty: O) in WARD_REQ_DUTIES then D else <> endif;
 
 % Create the mask array
-%array[STAFFS, DAYS] of opt DUTIES: special_mask = 
-%    array2d(STAFFS, DAYS, [get_special_mask(s,d) | s in STAFFS, d in DAYS]);
+array[STAFFS, DAYS] of opt DUTIES: special_mask = 
+    array2d(STAFFS, DAYS, [get_special_mask(s,d) | s in STAFFS, d in DAYS]);
 
 % Function to apply mask
-%function array[DAYS] of var DUTIES: apply_special_mask(STAFFS: s, array[DAYS] of var DUTIES: staff_roster) =
-%    array1d(DAYS, [if occurs(special_mask[s,d]) then deopt(special_mask[s,d]) else staff_roster[d] endif
-%                  | d in DAYS ]);
+function array[DAYS] of var DUTIES: apply_special_mask(STAFFS: s, array[DAYS] of var DUTIES: staff_roster) =
+    array1d(DAYS, [if occurs(special_mask[s,d]) then deopt(special_mask[s,d]) else staff_roster[d] endif
+                  | d in DAYS ]);
 
 % Decision Variables
 array[STAFFS, DAYS] of var ASSIGNMENTS0: roster;
@@ -169,7 +154,7 @@ constraint active_constraints[NormalDutyStateDiagram] -> rules6();
 constraint active_constraints[NormalNightFrequency] -> rules7();
 constraint active_constraints[CallNightDuty] -> rules8();
 constraint active_constraints[NormalOffFrequency] -> rules9();
-%constraint active_constraints[ReqAnnualLeaves] -> rules10();
+constraint active_constraints[NonWardConsecutiveOs] -> rules10();
 %constraint active_constraints[LongNightDuties] -> rules11();
 constraint active_constraints[PublicHolidayOff] -> rules12();
 constraint active_constraints[WardDayDuty] -> rules13();
@@ -254,9 +239,12 @@ predicate rules9 = (forall(i in STAFFS where not (i in CLASS_STAFFS[NIGHT])) (
     } in regular([assignment_to_duty(temp[j]) | j in DAYS], Q4, nDuties, t4, q0, STATE4)
 ));
 
-% Rule 10: constraint of staff entitled annual leaves
-predicate rules10 = forall(i in STAFFS, j in DAYS) (
-    is_annual_leave[i,j] -> roster[i,j] == O
+% Rule 10: constraint of no consecutive 3/4Os for day/night-teachers if not ward-requested
+predicate rules10 = forall(i in STAFFS) (
+    let {
+        array[DAYS] of var DUTIES: masked = apply_special_mask(i,array1d(DAYS,[assignment_to_duty(roster[i,j]) | j in DAYS]))
+    } in (not (i in CLASS_STAFFS[NIGHT])) -> (count_subseq(masked, [O, O, O]) == 0) /\ 
+        (i in CLASS_STAFFS[NIGHT] -> (count_subseq(masked, [O, O, O, O]) == 0))
 );
 
 % Rule 11: constraint of requested long night duties   
