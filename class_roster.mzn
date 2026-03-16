@@ -294,8 +294,10 @@ function var int: score4() = sum(i in STAFFS) (staff_unfavor_counts[i,night1n1o]
 % Score 5: 3N1O for night-teachers
 function var int: score5() = sum(i in STAFFS) (staff_unfavor_counts[i,night3n1o]);
 
-% Score 6: 2A1P in class
-function var int: score6() = 0;
+% Score 6: # of A > # of P in every day class
+function var int: score6() = sum(i in C(1..nRosterDays), j in CLASSES where j != NIGHT) (
+                              card(ward[i,arg_val(allAssignments,(duty: A, place: j))]) > 
+                              card(ward[i,arg_val(allAssignments,(duty: P, place: j))]));
 
 % Score 7: uneven unfavorable duties among day teachers
 function var int: score7() = sum(i in DAY_UNFAVORS) (max_diff([col(staff_unfavor_counts,i)[j] | j in STAFFS where not (j in CLASS_STAFFS[NIGHT])])) +
