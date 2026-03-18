@@ -14,8 +14,8 @@ enum RULES = {WardReqDuty,            % ward request duty constraint
               NormalNightFrequency,   % at most 1 N for CN days constraint (mandatory)
               CallNightDuty,          % call night then O constraint (mandatory)
               NormalOffFrequency,     % at least 1 O for NW days constraint (mandatory)
-              NonWardConsecutiveOs,   % ward requested consecutive 3/4Os for day/night-teachers (mandatory)
-              LongNightDuties,        % requested long night duties (mandatory)
+              DayConsecutiveAL,       % ward requested consecutive 3Os for day-teachers (mandatory)
+              NightConsecutiveAL,     % ward requested consecutive 4Os for night-teachers (mandatory)
               PublicHolidayOff,       % # of public holiday O constraint
               WardDayDuty             % ward requested D duty constraint
               };
@@ -160,8 +160,8 @@ constraint active_constraints[NormalDutyStateDiagram] -> rules6();
 constraint active_constraints[NormalNightFrequency] -> rules7();
 constraint active_constraints[CallNightDuty] -> rules8();
 constraint active_constraints[NormalOffFrequency] -> rules9();
-constraint active_constraints[NonWardConsecutiveOs] -> rules10();
-%constraint active_constraints[LongNightDuties] -> rules11();
+constraint active_constraints[DayConsecutiveAL] -> rules10();
+constraint active_constraints[NightConsecutiveAL] -> rules11();
 constraint active_constraints[PublicHolidayOff] -> rules12();
 constraint active_constraints[WardDayDuty] -> rules13();
 
@@ -245,25 +245,38 @@ predicate rules9 = (forall(i in STAFFS where not (i in CLASS_STAFFS[NIGHT])) (
     } in regular([assignment_to_duty(temp[j]) | j in DAYS], Q4, nDuties, t4, q0, STATE4)
 ));
 
-% Rule 10: constraint of no consecutive 3/4Os for day/night-teachers if not ward-requested
-predicate rules10 = forall(i in STAFFS) (
-    let {
-        array[DAYS] of var DUTIES: masked = apply_special_mask(i,array1d(DAYS,[assignment_to_duty(roster[i,j]) | j in DAYS]))
-    } in (not (i in CLASS_STAFFS[NIGHT])) -> (count_subseq(masked, [O, O, O]) == 0) /\ 
-        (i in CLASS_STAFFS[NIGHT] -> (count_subseq(masked, [O, O, O, O]) == 0))
-);
+% Rule 10: constraint of no consecutive 3Os for day-teachers if not ward-requested
+int: Q5 = 5;
+set of int: STATE5 = 1..Q5;
+enum WORKPOAL = {W, PO, AL};
+int: nWORKPOAL = card(WORKPOAL);
+array[STATE5,WORKPOAL] of int: t5 = 
+  [| 1, 2, 4      % state 1
+   | 1, 3, 3      % state 2
+   | 1, 0, 0      % state 3 (cannot PO and AL again)
+   | 1, 3, 5      % state 4
+   | 1, 0, 5 |];  % state 5 (cannot PO again)
+function array[DAYS] of var WORKPOAL: convert_wpoal(STAFFS: staff, array[DAYS] of var ASSIGNMENTS0: asgmts) = 
+    array1d(DAYS,[if not (assignment_to_duty(asgmts[j]) in OFF) then W 
+                  elseif (staff: staff, day: j, duty: O) in WARD_REQ_DUTIES then AL else PO endif | j in DAYS]);
+predicate rules10 = (forall(i in STAFFS where not (i in CLASS_STAFFS[NIGHT])) (
+    regular(convert_wpoal(i,row(roster,i)), Q5, nWORKPOAL, t5, q0, STATE5)
+));
 
-% Rule 11: constraint of requested long night duties   
-%array[STAFFS, DAYS] of opt DUTIES: long_night_duties = 
-%    array2d(STAFFS, DAYS, [get_long_night_duty(i,j) | i in STAFFS, j in DAYS]);
-%function opt DUTIES: get_long_night_duty(STAFFS: s, DAYS: d) =
-%    let {
-%        int: row = long_night_row(s, d),
-%        int: day_offset = d - if row > 0 then long_nights[row,2] else 0 endif + 1
-%    } in if row == 0 then <> else to_enum(DUTIES, long_nights[row, 2 + day_offset]) endif;
-%predicate rules11 = forall(i in STAFFS, j in DAYS) (
-%    occurs(long_night_duties[i,j]) -> roster[i,j] == long_night_duties[i,j]
-%);
+% Rule 11: constraint of no consecutive 4Os for night-teachers if not ward-requested
+int: Q6 = 7;
+set of int: STATE6 = 1..Q6;
+array[STATE6,WORKPOAL] of int: t6 = 
+  [| 1, 2, 5      % state 1
+   | 1, 3, 3      % state 2
+   | 1, 4, 4      % state 3
+   | 1, 0, 0      % state 4 (cannot PO and AL again)
+   | 1, 3, 6      % state 5 
+   | 1, 4, 7      % state 6 
+   | 1, 0, 7 |];  % state 7 (cannot PO again)
+predicate rules11 = (forall(i in CLASS_STAFFS[NIGHT]) (
+    regular(convert_wpoal(i,row(roster,i)), Q6, nWORKPOAL, t6, q0, STATE6)
+));
 
 % Rule 12: constraint of >=1 public holiday Os for every nurse in a month if # of public holidays >= 3
 int: min_ph_O = round((nPHs-1)/3);

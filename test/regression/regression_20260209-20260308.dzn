@@ -22,8 +22,8 @@ active_constraints = [
   true, % at least 2 Os for 4Ns constraint (mandatory)
   true, % call night then O constraint (mandatory)
   true, % at least 1 O for NW days constraint (mandatory)
-  true, % ward requested consecutive 3/4Os for day/night-teachers (mandatory)
-  false, % requested long night duties (mandatory) [false]
+  true, % ward requested consecutive 3Os for day-teachers (mandatory)
+  true, % ward requested consecutive 4Os for night-teachers (mandatory)
   false, % # of public holiday O constraint
   true, % ward requested D duty constraint
 ];
