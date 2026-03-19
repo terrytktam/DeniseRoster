@@ -371,14 +371,14 @@ function var int: count_subseq(array[int] of var DUTIES: main, array[int] of DUT
     } in if n > m then 0 else sum(i in 1..m-n+1) (forall(j in 1..n)(main[i+j-1] == pat[j])) endif;
 
 % Verify data input and derived parameters
-output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
-output ["Whole calendar: "] ++ [show(DAY_WEEKDAYS)] ++ ["\n"];
-output ["Available weekends: "] ++ [show(weekends)] ++ ["\n"];
-output ["Available teachers: "] ++ [show(card(CLASS_STAFFS[i])) ++ " " | i in CLASSES] ++ ["\n"];
-output ["allAssignments: \n"] ++ [show(allAssignments)] ++ ["\n"];
-output ["allAssignments in ASSIGNMENTS: \n"] ++ [show([allAssignments[i] | i in ASSIGNMENTS])] ++ ["\n"];
-output ["MIN_WARD: "] ++ [show(MIN_WARD)] ++ ["\n"];
-output ["MAX_WARD: "] ++ [show(MAX_WARD)] ++ ["\n"];
+%output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
+%output ["Whole calendar: "] ++ [show(DAY_WEEKDAYS)] ++ ["\n"];
+%output ["Available weekends: "] ++ [show(weekends)] ++ ["\n"];
+%output ["Available teachers: "] ++ [show(card(CLASS_STAFFS[i])) ++ " " | i in CLASSES] ++ ["\n"];
+%output ["allAssignments: \n"] ++ [show(allAssignments)] ++ ["\n"];
+%output ["allAssignments in ASSIGNMENTS: \n"] ++ [show([allAssignments[i] | i in ASSIGNMENTS])] ++ ["\n"];
+%output ["MIN_WARD: "] ++ [show(MIN_WARD)] ++ ["\n"];
+%output ["MAX_WARD: "] ++ [show(MAX_WARD)] ++ ["\n"];
 
 % Result printing
 output["\t" ++ join(" ",[if i in {C(1),X(1)} then "1" else " " endif | i in DAYS]) ++ "\n"];
