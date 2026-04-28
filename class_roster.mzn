@@ -225,13 +225,13 @@ predicate rules7 = (forall(i in CLASS_STAFFS[NIGHT]) (
     } in regular([assignment_to_duty(temp[j]) | j in DAYS], Q2, nDuties, t2, q0, STATE2)
 ));
 
-% Rule 8: constraint of call night then O
+% Rule 8: constraint of call night then O and then cannot A
 predicate rules8 = (forall(i in DAYS) (
      (not (i in call_req_duties) -> absent(call[i])) /\
-     ((i in call_req_duties /\ enum_next(i) in DAYS) -> (occurs(call[i]) /\ 
+     ((i in call_req_duties /\ enum_next(i) in DAYS /\ enum_next(enum_next(i)) in DAYS) -> (occurs(call[i]) /\ 
       let { 
           var STAFFS: staff = deopt(call[i])
-      } in assignment_to_duty(roster[staff,i]) == P /\ assignment_to_duty(roster[staff,enum_next(i)]) == O))
+      } in assignment_to_duty(roster[staff,i]) == P /\ assignment_to_duty(roster[staff,enum_next(i)]) == O) /\ assignment_to_duty(roster[staff,enum_next(enum_next(i))]) != A))
 ));
 
 % Rule 9: constraint of at least 1 O for every nurse in every consecutive MW days
