@@ -1,4 +1,3 @@
-
 include "globals.mzn";
 
 % Constants
@@ -12,7 +11,7 @@ enum RULES = {WardReqDuty,            % ward request duty constraint
               MinWardStaffReq,        % daily ward requirement constraint (mandatory)
               NormalDutyStateDiagram, % normal AN constraint
               NormalNightFrequency,   % at most 1 N for CN days constraint (mandatory)
-              CallNightDuty,          % call night then O constraint (mandatory)
+              CallNightDuty,          % call night then O then not A constraint (mandatory)
               NormalOffFrequency,     % at least 1 O for NW days constraint (mandatory)
               DayConsecutiveAL,       % ward requested consecutive 3Os for day-teachers (mandatory)
               NightConsecutiveAL,     % ward requested consecutive 4Os for night-teachers (mandatory)
@@ -42,7 +41,8 @@ int: nBUTTERFLY;  % number of staffs in BUTTERFLY class
 int: nDRAGONFLY;  % number of staffs in DRAGONFLY class
 int: nBEE;        % number of staffs in BEE class
 int: nNIGHT;      % number of NIGHT staffs
-int: nCO;         % minimum number of Os in roster
+int: nCOD;        % minimum number of Os in roster for day teachers
+int: nCON;        % minimum number of Os in roster for night teachersws
 WEEKDAYS: MONTH_START;
 array[int, int] of int: min_ward;
 array[int, int] of int: max_ward;
@@ -171,12 +171,14 @@ predicate rules1 = forall(i in WARD_REQ_DUTIES) (
 );
 
 % Rule 2: constraint of # of Os (contract + public holidays) for every nurse in a month
-int: min_O_count = nCO + nPHs;
+int: min_O_count_day = nCOD + nPHs;
+int: min_O_count_night = nCON + nPHs;
 int: max_O_count = nDays;
 predicate rules2 = (forall(i in STAFFS) (
     let {
         array[DAYS] of var ASSIGNMENTS0: temp = row(roster,i)
-    } in global_cardinality([assignment_to_duty(temp[j]) | j in C(1..nRosterDays)], OFF, [min_O_count], [max_O_count])
+    } in (not (i in CLASS_STAFFS[NIGHT]) -> global_cardinality([assignment_to_duty(temp[j]) | j in C(1..nRosterDays)], OFF, [min_O_count_day], [max_O_count])) /\
+    (i in CLASS_STAFFS[NIGHT] -> global_cardinality([assignment_to_duty(temp[j]) | j in C(1..nRosterDays)], OFF, [min_O_count_night], [max_O_count]))
 ));
 
 % Rule 3: constraint of min # of contract Os for every teacher
@@ -231,7 +233,7 @@ predicate rules8 = (forall(i in DAYS) (
      ((i in call_req_duties /\ enum_next(i) in DAYS /\ enum_next(enum_next(i)) in DAYS) -> (occurs(call[i]) /\ 
       let { 
           var STAFFS: staff = deopt(call[i])
-      } in assignment_to_duty(roster[staff,i]) == P /\ assignment_to_duty(roster[staff,enum_next(i)]) == O) /\ assignment_to_duty(roster[staff,enum_next(enum_next(i))]) != A))
+      } in assignment_to_duty(roster[staff,i]) == P /\ assignment_to_duty(roster[staff,enum_next(i)]) == O /\ assignment_to_duty(roster[staff,enum_next(enum_next(i))]) != A))
 ));
 
 % Rule 9: constraint of at least 1 O for every nurse in every consecutive MW days
