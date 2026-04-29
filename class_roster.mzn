@@ -26,10 +26,11 @@ enum HEURISTICS = { NonHomeClassAssignment,      % non-home class assignment
                     Class2A1P,                   % 2A1P for classes
                     UnevenDayUnfavor,            % uneven unfavorable duty for day-teachers
                     UnevenNightUnfavor,          % uneven unfavorable duty for night-teachers
-                    UnevenFavorOs                % uneven favorable Os for all teachers
+                    UnevenFavorOs,               % uneven favorable Os for all teachers
+                    UnevenDayAP                  % uneven A/P for day teachers
                     };
 enum MINS = { shift, ladybug, butterfly, dragonfly, bee, night };
-enum UNFAVORS = { early, pc, day2night, pa, noa, night1n1o, night3n1o };
+enum UNFAVORS = { early, pc, day2night, pa, noa, unevenap, night1n1o, night3n1o };
 array[DUTIES] of string: lowercase = ["n", "a", "p", "o", "d"];
 array[CLASSES] of string: shortform = ["L", "F", "D", "B", "N"];
 
@@ -70,7 +71,7 @@ array[CLASSES] of ClassMins: CLASS_MINS = [(LYG, ladybug), (BFY, butterfly), (DN
 set of WEEKDAYS: WEEKEND = {Sat, Sun};
 set of DUTIES: SHIFTS = {N, A, P};
 set of DUTIES: OFF = {O};
-set of UNFAVORS: DAY_UNFAVORS = {early, pc, day2night, pa, noa};
+set of UNFAVORS: DAY_UNFAVORS = {early, pc, day2night, pa, noa, unevenap};
 set of UNFAVORS: NIGHT_UNFAVORS = {night1n1o, night3n1o};
 array[int] of Assignment: allAssignments = [(duty: i, place: j) | i in SHIFTS where i != N, j in CLASSES where j != NIGHT] ++ 
                                            [(duty: N, place: NIGHT), (duty: O, place: HOME), (duty: D, place: OFFICE)];
@@ -148,6 +149,9 @@ constraint forall(i in STAFFS) (
 );
 constraint forall(i in STAFFS) (
     global_cardinality([assignment_to_duty(roster[i,j]) | j in favor_Os], OFF, [staff_favor_O_counts[i]])
+);
+constraint forall(i in STAFFS) (
+    staff_unfavor_counts[i,unevenap] = diff_ap(staff_duty_counts[i,A],staff_duty_counts[i,P])
 );
 
 % Rule feature toggle constraints
@@ -292,7 +296,7 @@ predicate rules13 = forall(i in STAFFS, j in DAYS) (
 );
 
 % heuristics score array
-array[HEURISTICS] of var int: scores = [score1(), score2(), score3(), score4(), score5(), score6(), score7(), score8(), score9()];
+array[HEURISTICS] of var int: scores = [score1(), score2(), score3(), score4(), score5(), score6(), score7(), score8(), score9(), score10()];
 
 % Score 1: non-home class assignment (including N for day-teachers)
 function var int: score1() = sum(i in STAFFS, j in DAYS where assignment_to_duty(roster[i,j]) in SHIFTS) (not home_class_assigned(i,roster[i,j]));  
@@ -324,6 +328,9 @@ function var int: score8() = sum(i in NIGHT_UNFAVORS) (max_diff([col(staff_unfav
 
 % Score 9: uneven weekend+PH Os among all teachers
 function var int: score9() = max_diff(staff_favor_O_counts);
+
+% Score 10: uneven A/P among day teachers
+function var int: score10() = sum(i in STAFFS) (staff_unfavor_counts[i,unevenap]);
 
 % Objective function
 solve :: int_search(roster, first_fail, indomain_min) minimize sum(i in HEURISTICS) (heuristics_weights[i] * scores[i]);
@@ -371,6 +378,12 @@ function var int: count_subseq(array[int] of var DUTIES: main, array[int] of DUT
     let { int: m = length(main),
           int: n = length(pat)
     } in if n > m then 0 else sum(i in 1..m-n+1) (forall(j in 1..n)(main[i+j-1] == pat[j])) endif;
+
+function var int: diff_ap(var int: a, var int: p) = 
+    let {
+        var int: temp = abs(a-p)
+    } in 
+    if (a+p) mod 2 == 1 /\ temp == 1 then 0 else temp endif;
 
 % Verify data input and derived parameters
 %output ["Whole calendar: "] ++ [show(i) ++ " " | i in DAYS] ++ ["\n"];
